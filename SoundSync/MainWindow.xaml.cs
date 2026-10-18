@@ -426,7 +426,7 @@ namespace SoundSync
             if (isConnected) RefreshMakeUpGain();
 
             StatusText.Text = appSettings.IndependentVolumes
-                ? "独立音量已开启：各转发设备接收补偿后的信号，由自身 Windows 音量控制。"
+                ? "独立音量已开启：各转发设备接收补偿后的信号，由各自系统音量和软件音量控制。"
                 : "独立音量已关闭：转发设备同时受默认设备和自身音量影响。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
@@ -466,6 +466,7 @@ namespace SoundSync
                     isDefault = i.IsDefaultDevice,
                     selected = i.IsSelected,
                     volume = Math.Round(i.SystemVolume, 3),
+                    softwareVolume = Math.Round(i.SoftwareVolume, 3),
                     delay = i.Delay,
                     badge = i.ConnectionBadge,
                     editable = i.CanProcessAudio
@@ -551,6 +552,10 @@ namespace SoundSync
                 {
                     case "volume" when root.TryGetProperty("value", out var v):
                         item.SystemVolume = (float)Math.Clamp(v.GetDouble(), 0, 1);
+                        break;
+
+                    case "softwareVolume" when root.TryGetProperty("value", out var sv) && item.CanProcessAudio:
+                        item.SoftwareVolume = (float)sv.GetDouble();
                         break;
 
                     case "delay" when root.TryGetProperty("value", out var d) && item.CanEditDelay:
@@ -1099,25 +1104,8 @@ namespace SoundSync
             if (!isConnected) return;
 
             isMuted = !isMuted;
-            var items = DeviceListBox.ItemsSource as List<DeviceItem>;
-            if (items != null)
-            {
-                foreach (var item in items)
-                {
-                    if (item.VolumeProvider != null)
-                    {
-                        item.VolumeProvider.Volume = isMuted ? 0f : item.Volume;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            item.Device.AudioEndpointVolume.Mute = isMuted;
-                        }
-                        catch { }
-                    }
-                }
-            }
+            foreach (var item in allItems.Where(i => !i.IsDefaultDevice))
+                item.IsSoftwareMuted = isMuted;
 
             if (isMuted)
             {
@@ -1200,13 +1188,13 @@ namespace SoundSync
                     {
                         Device = d,
                         IsSelected = false,
-                        // The VOLUME slider now drives the Windows endpoint volume directly,
-                        // so the in-stream gain stays at unity. Keeping a second, invisible
-                        // gain here is what let an output sit silently at zero.
-                        Volume = 1.0f,
+                        // New profiles start with an unattenuated mirrored stream.
+                        // Its gain is separate from the Windows endpoint volume.
+                        SoftwareVolume = 1.0f,
                         IsDefaultDevice = (d.ID == defaultDevice.ID),
                         DelayChangedCallback = () => Dispatcher.BeginInvoke(new Action(UpdateRelativeDelays)),
-                        FormatChangedCallback = changed => Dispatcher.BeginInvoke(new Action(() => HandleFormatChanged(changed)))
+                        FormatChangedCallback = changed => Dispatcher.BeginInvoke(new Action(() => HandleFormatChanged(changed))),
+                        SoftwareVolumeChangedCallback = ScheduleSoftwareVolumeSave
                     };
                     item.AttachSystemVolume(action => Dispatcher.BeginInvoke(action));
                     item.LoadSystemFormat();
@@ -1492,8 +1480,7 @@ namespace SoundSync
 
         private void Disconnect()
         {
-            var items = DeviceListBox.ItemsSource as List<DeviceItem> ?? new List<DeviceItem>();
-            audioEngine.Disconnect(items);
+            audioEngine.Disconnect(allItems);
 
             if (linkServer != null)
             {
@@ -1575,6 +1562,28 @@ namespace SoundSync
             }
         }
 
+        private System.Windows.Threading.DispatcherTimer? softwareVolumeSaveTimer;
+
+        private void ScheduleSoftwareVolumeSave()
+        {
+            // A drag can generate dozens of changes per second. Apply audio immediately,
+            // but save only after the slider settles. Closing also flushes the profile.
+            softwareVolumeSaveTimer ??= new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(300)
+            };
+            softwareVolumeSaveTimer.Stop();
+            softwareVolumeSaveTimer.Tick -= SaveSoftwareVolumeAfterDrag;
+            softwareVolumeSaveTimer.Tick += SaveSoftwareVolumeAfterDrag;
+            softwareVolumeSaveTimer.Start();
+        }
+
+        private void SaveSoftwareVolumeAfterDrag(object? sender, EventArgs e)
+        {
+            softwareVolumeSaveTimer?.Stop();
+            SaveCurrentProfile();
+        }
+
         private void SaveCurrentProfile()
         {
             try
@@ -1586,7 +1595,7 @@ namespace SoundSync
                 {
                     DeviceId = i.Device.ID,
                     IsSelected = i.IsSelected,
-                    Volume = i.Volume,
+                    SoftwareVolume = i.SoftwareVolume,
                     Delay = i.Delay,
                     Bass = i.Bass,
                     Mid = i.Mid,
@@ -1625,8 +1634,9 @@ namespace SoundSync
                     if (matchingItem != null)
                     {
                         matchingItem.IsSelected = saved.IsSelected;
-                        // saved.Volume is deliberately not restored: the VOLUME slider is
-                        // the Windows endpoint volume now, which Windows already persists.
+                        // The legacy Volume field does not represent this new app gain.
+                        // Missing SoftwareVolume defaults to 100%, including older profiles.
+                        matchingItem.SoftwareVolume = saved.SoftwareVolume;
                         matchingItem.Delay = saved.Delay;
                         matchingItem.Bass = saved.Bass;
                         matchingItem.Mid = saved.Mid;
@@ -1646,6 +1656,7 @@ namespace SoundSync
 
         protected override void OnClosed(EventArgs e)
         {
+            softwareVolumeSaveTimer?.Stop();
             SaveCurrentProfile();
             recoveryTimer?.Stop();
             environmentWatcher?.Dispose();

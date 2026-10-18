@@ -22,6 +22,7 @@ namespace SoundSync.Tests
                         DeviceId = "Device1", 
                         IsSelected = true, 
                         Volume = 0.8f, 
+                        SoftwareVolume = 0.35f,
                         Delay = 10,
                         Bass = 1.0f,
                         Mid = 2.0f,
@@ -36,6 +37,7 @@ namespace SoundSync.Tests
                 Assert.Equal("Device1", loaded[0].DeviceId);
                 Assert.True(loaded[0].IsSelected);
                 Assert.Equal(0.8f, loaded[0].Volume);
+                Assert.Equal(0.35f, loaded[0].SoftwareVolume);
                 Assert.Equal(10, loaded[0].Delay);
                 Assert.Equal(1.0f, loaded[0].Bass);
                 Assert.Equal(2.0f, loaded[0].Mid);
@@ -48,6 +50,20 @@ namespace SoundSync.Tests
                     File.Delete(tempFile);
                 }
             }
+        }
+
+        [Fact]
+        public void LegacyProfile_DoesNotReuseOldVolumeAsSoftwareAttenuation()
+        {
+            string path = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(path, "[{\"DeviceId\":\"old-device\",\"Volume\":0.12}]");
+                var settings = Assert.Single(new SettingsManager(path).LoadProfile());
+                Assert.Equal(0.12f, settings.Volume);
+                Assert.Equal(1f, settings.SoftwareVolume);
+            }
+            finally { File.Delete(path); }
         }
 
         [Fact]

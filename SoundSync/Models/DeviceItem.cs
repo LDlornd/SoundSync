@@ -305,19 +305,46 @@ namespace SoundSync.Models
             set { _isSelected = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShowSyncOptions)); }
         }
 
-        private float _volume = 1.0f;
-        public float Volume
+        private float _softwareVolume = 1.0f;
+        /// <summary>Gain for this app's mirrored stream only; never writes to the Windows endpoint.</summary>
+        public float SoftwareVolume
         {
-            get => _volume;
+            get => _softwareVolume;
             set
             {
-                _volume = value;
+                float bounded = float.IsNaN(value) ? 1.0f : Math.Clamp(value, 0f, 1f);
+                if (_softwareVolume == bounded) return;
+                _softwareVolume = bounded;
                 OnPropertyChanged();
-                if (VolumeProvider != null)
-                {
-                    VolumeProvider.Volume = _volume;
-                }
+                OnPropertyChanged(nameof(SoftwareVolumePercent));
+                ApplySoftwareVolume();
+                SoftwareVolumeChangedCallback?.Invoke();
             }
+        }
+
+        public string SoftwareVolumePercent => $"{SoftwareVolume * 100:F0}%";
+
+        public string SoftwareVolumeTooltip => IsDefaultDevice
+            ? "系统默认设备直接由 Windows 播放，无法用 SoundSync 软件音量控制。请调整其他转发设备的软件音量。"
+            : "只调整 SoundSync 转发到此设备的音频，范围为 0% 至 100%。不会修改 Windows 设备音量，也不影响其他程序。100% 保持原信号，0% 仅将此路转发静音。";
+
+        private bool _isSoftwareMuted;
+        /// <summary>Transient routing mute; changing the slider while muted keeps the stream silent.</summary>
+        public bool IsSoftwareMuted
+        {
+            get => _isSoftwareMuted;
+            set
+            {
+                _isSoftwareMuted = value;
+                OnPropertyChanged();
+                ApplySoftwareVolume();
+            }
+        }
+
+        private void ApplySoftwareVolume()
+        {
+            if (_volumeProvider != null)
+                _volumeProvider.Volume = IsSoftwareMuted ? 0f : SoftwareVolume;
         }
 
         private int _delay = 0;
@@ -427,12 +454,24 @@ namespace SoundSync.Models
             catch { }
         }
 
-        public VolumeSampleProvider? VolumeProvider { get; set; }
+        private VolumeSampleProvider? _volumeProvider;
+        public VolumeSampleProvider? VolumeProvider
+        {
+            get => _volumeProvider;
+            set
+            {
+                _volumeProvider = value;
+                ApplySoftwareVolume();
+            }
+        }
         public EqualizerSampleProvider? EqualizerProvider { get; set; }
         public DelaySampleProvider? DelayProvider { get; set; }
 
         // Action callback to trigger delay updates without direct MainWindow coupling
         public Action? DelayChangedCallback { get; set; }
+
+        /// <summary>Schedules persistence after a desktop or remote software-volume change.</summary>
+        public Action? SoftwareVolumeChangedCallback { get; set; }
 
         /// <summary>
         /// Raised after this endpoint's sample rate changed. Windows tears the audio engine

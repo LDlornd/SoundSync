@@ -17,6 +17,8 @@ namespace SoundSync.Tests
 
         private MainViewModel CreateViewModel()
         {
+            _audioEngineMock.Setup(a => a.GetActiveRenderDevices()).Returns(new List<NAudio.CoreAudioApi.MMDevice>());
+            _settingsManagerMock.Setup(s => s.LoadProfile()).Returns(new List<SavedDeviceSettings>());
             return new MainViewModel(_audioEngineMock.Object, _networkStreamerMock.Object, _settingsManagerMock.Object, _dispatcher);
         }
 
@@ -25,7 +27,7 @@ namespace SoundSync.Tests
         {
             // Arrange
             var vm = CreateViewModel();
-            var device = new DeviceItem { Device = new NAudio.CoreAudioApi.MMDevice() };
+            var device = new DeviceItem();
             // Set callback to invoke the engine update as the real LoadDevices does
             device.DelayChangedCallback = () => _audioEngineMock.Object.UpdateRelativeDelays(vm.Devices.ToList());
             vm.Devices.Add(device);

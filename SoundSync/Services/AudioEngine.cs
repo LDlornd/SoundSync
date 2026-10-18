@@ -101,30 +101,8 @@ namespace SoundSync.Services
                     ISampleProvider sampleProvider = FormatAdapter.Adapt(
                         buffer.ToSampleProvider(), outputFormat);
 
-                    // Meter the material BEFORE this output's volume, equaliser and delay, and
-                    // undo the default device's volume while reporting it. The bar then shows
-                    // what is actually playing rather than how loud any one knob is set, so all
-                    // the bars agree with each other and stop moving when a volume moves.
-                    sampleProvider = new MeteringSampleProvider(sampleProvider, peak =>
-                    {
-                        deviceItem.PeakLevel = Math.Clamp(peak * sourceMeterGain, 0f, 1f);
-                    });
-
-                    var volumeProvider = new VolumeSampleProvider(sampleProvider) { Volume = deviceItem.Volume };
-                    deviceItem.VolumeProvider = volumeProvider;
-
-                    var equalizerProvider = new EqualizerSampleProvider(volumeProvider)
-                    {
-                        BassDb = deviceItem.Bass,
-                        MidDb = deviceItem.Mid,
-                        TrebleDb = deviceItem.Treble
-                    };
-                    deviceItem.EqualizerProvider = equalizerProvider;
-
-                    var delayProvider = new DelaySampleProvider(equalizerProvider) { DelayMilliseconds = 0 };
-                    deviceItem.DelayProvider = delayProvider;
-
-                    wasapiOut.Init(FormatAdapter.AdaptToWaveProvider(delayProvider, outputFormat));
+                    var outputPipeline = CreateOutputPipeline(deviceItem, sampleProvider);
+                    wasapiOut.Init(FormatAdapter.AdaptToWaveProvider(outputPipeline, outputFormat));
                     wasapiOut.Play();
                     outputStreams.Add(wasapiOut);
                     buffers.Add(buffer);
@@ -282,6 +260,29 @@ namespace SoundSync.Services
             }
         }
 
+        /// <summary>Builds the per-output DSP path without opening or changing any Windows device.</summary>
+        internal ISampleProvider CreateOutputPipeline(DeviceItem item, ISampleProvider source)
+        {
+            // Meter before this output's processing, so its gain does not hide incoming audio.
+            var meter = new MeteringSampleProvider(source, peak =>
+                item.PeakLevel = Math.Clamp(peak * sourceMeterGain, 0f, 1f));
+            var equalizer = new EqualizerSampleProvider(meter)
+            {
+                BassDb = item.Bass,
+                MidDb = item.Mid,
+                TrebleDb = item.Treble
+            };
+            item.EqualizerProvider = equalizer;
+            var delay = new DelaySampleProvider(equalizer) { DelayMilliseconds = 0 };
+            item.DelayProvider = delay;
+
+            // Gain goes LAST: muting or adjusting volume also affects audio already queued
+            // in the delay stage, instead of waiting up to 500 ms for that queue to drain.
+            var volume = new VolumeSampleProvider(delay);
+            item.VolumeProvider = volume;
+            return volume;
+        }
+
         /// <summary>Format this endpoint expects, falling back to the captured one.</summary>
         private static WaveFormat GetOutputFormat(MMDevice device, WaveFormat fallback)
         {
@@ -309,6 +310,7 @@ namespace SoundSync.Services
             foreach (var item in activeDevices)
             {
                 item.VolumeProvider = null;
+                item.IsSoftwareMuted = false;
                 item.EqualizerProvider = null;
                 item.DelayProvider = null;
                 item.OutputBuffer = null;
@@ -466,9 +468,8 @@ namespace SoundSync.Services
             lastGainCheck = 0;
             RefreshDistributionGain();
 
-            foreach (var item in activeDevices)
-                if (item.VolumeProvider != null)
-                    item.VolumeProvider.Volume = 1.0f;
+            // Distribution compensation is upstream of each output's software volume.
+            // Leave that gain and its transient mute untouched when the source volume changes.
         }
 
         public void UpdateRelativeDelays(List<DeviceItem> activeDevices)

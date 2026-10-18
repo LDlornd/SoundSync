@@ -106,14 +106,11 @@ namespace SoundSync.ViewModels
                 var activeDevices = _audioEngine.GetActiveRenderDevices();
                 foreach (var d in activeDevices)
                 {
-                    float initialVol = 1.0f;
-                    try { initialVol = d.AudioEndpointVolume.MasterVolumeLevelScalar; } catch { }
-
                     var item = new DeviceItem
                     {
                         Device = d,
                         IsSelected = false,
-                        Volume = initialVol
+                        SoftwareVolume = 1.0f
                     };
                     item.DelayChangedCallback = () => _audioEngine.UpdateRelativeDelays(Devices.ToList());
                     Devices.Add(item);
@@ -140,7 +137,7 @@ namespace SoundSync.ViewModels
                 if (matchingItem != null)
                 {
                     matchingItem.IsSelected = saved.IsSelected;
-                    matchingItem.Volume = saved.Volume;
+                    matchingItem.SoftwareVolume = saved.SoftwareVolume;
                     matchingItem.Delay = saved.Delay;
                     matchingItem.Bass = saved.Bass;
                     matchingItem.Mid = saved.Mid;
@@ -155,7 +152,7 @@ namespace SoundSync.ViewModels
             {
                 DeviceId = i.Device.ID,
                 IsSelected = i.IsSelected,
-                Volume = i.Volume,
+                SoftwareVolume = i.SoftwareVolume,
                 Delay = i.Delay,
                 Bass = i.Bass,
                 Mid = i.Mid,

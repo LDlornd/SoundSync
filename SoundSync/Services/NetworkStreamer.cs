@@ -814,6 +814,7 @@ namespace SoundSync.Services
         <div class='controls' id='pcPanel' style='display:none'>
             <div class='ctl-row'><span class='ctl-label' style='width:auto'>电脑输出设备</span>
                 <span class='ctl-value' id='pcMode' style='width:auto'></span></div>
+            <p class='ctl-hint'>设备行的滑块调整 Windows 系统音量；下方“软件音量”只调整 SoundSync 转发的音频，不影响系统音量或其他程序。</p>
             <div id='pcList'></div>
         </div>
 
@@ -1100,6 +1101,8 @@ namespace SoundSync.Services
                 vol.type = 'range'; vol.min = 0; vol.max = 100;
                 vol.value = Math.round(d.volume * 100);
                 vol.disabled = !pcControllable;
+                vol.setAttribute('aria-label', 'Windows 系统音量：' + d.name);
+                vol.title = 'Windows 系统音量';
                 const volSend = throttled(v => sendCommand({ type: 'volume', id: d.id, value: v }));
                 vol.oninput = () => { pct.innerText = vol.value + '%'; holdList(); volSend.during(vol.value / 100); };
                 vol.onchange = () => { holdList(); volSend.final(vol.value / 100); };
@@ -1112,6 +1115,26 @@ namespace SoundSync.Services
                 pcList.appendChild(row);
 
                 if (d.editable) {
+                    if (typeof d.softwareVolume === 'number') {
+                        const sRow = document.createElement('div');
+                        sRow.className = 'ctl-row';
+                        const sLab = document.createElement('span');
+                        sLab.className = 'ctl-label'; sLab.innerText = '软件音量';
+                        const sSlide = document.createElement('input');
+                        sSlide.type = 'range'; sSlide.min = 0; sSlide.max = 100;
+                        sSlide.value = Math.round(d.softwareVolume * 100);
+                        sSlide.disabled = !pcControllable;
+                        sSlide.setAttribute('aria-label', 'SoundSync 软件音量：' + d.name);
+                        sSlide.title = '只调整此路转发音频，不改变 Windows 音量';
+                        const sVal = document.createElement('span');
+                        sVal.className = 'ctl-value'; sVal.innerText = sSlide.value + '%';
+                        const softwareSend = throttled(v => sendCommand({ type: 'softwareVolume', id: d.id, value: v }));
+                        sSlide.oninput = () => { sVal.innerText = sSlide.value + '%'; holdList(); softwareSend.during(sSlide.value / 100); };
+                        sSlide.onchange = () => { holdList(); softwareSend.final(sSlide.value / 100); };
+                        sRow.appendChild(sLab); sRow.appendChild(sSlide); sRow.appendChild(sVal);
+                        pcList.appendChild(sRow);
+                    }
+
                     const dRow = document.createElement('div');
                     dRow.className = 'ctl-row';
                     const dLab = document.createElement('span');

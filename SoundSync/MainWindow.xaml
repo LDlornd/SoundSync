@@ -519,7 +519,7 @@
 
             <TextBlock Text="音频输出设备" ToolTip="列出 Windows 当前启用的所有音频输出设备。勾选需要播放默认设备音频的设备。" Grid.Column="0" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}"/>
             <TextBlock Text="信号" ToolTip="各输出设备当前收到的音频信号电平。" Grid.Column="1" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-            <TextBlock Text="音量" ToolTip="各输出设备的 Windows 系统音量，以百分比显示。" Grid.Column="2" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+            <TextBlock Text="系统 / 软件音量" ToolTip="系统音量会更改 Windows 设备音量；软件音量只调整 SoundSync 转发到此设备的音频。" Grid.Column="2" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
             <TextBlock Text="延时" ToolTip="为各输出设备单独设置延时，让播放不同步的扬声器对齐。" Grid.Column="3" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
             <TextBlock Text="实际延迟" ToolTip="此输出设备当前的实际延迟，单位为毫秒。" Grid.Column="4" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Right"/>
         </Grid>
@@ -632,21 +632,48 @@
                                                  Height="8" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"
                                                  ToolTip="发送至此设备的实时音频电平；没有波动表示没有音频到达。"/>
 
-                                    <Grid Grid.Column="2" Margin="12,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="42"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Slider Grid.Column="0" Minimum="0" Maximum="1"
-                                                Value="{Binding SystemVolume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                Style="{StaticResource ConsoleSliderStyle}"
-                                                ToolTip="此输出设备的 Windows 音量，与系统音量混合器同步；在任意一处调节都会同步到另一处。"
-                                                VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding SystemVolumePercent}"
-                                                   FontFamily="{StaticResource OutlawFont}" FontSize="13" FontWeight="Bold"
-                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                    </Grid>
+                                    <StackPanel Grid.Column="2" Margin="6,0" VerticalAlignment="Center">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="30"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="42"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="系统" FontFamily="{StaticResource OutlawFont}" FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                            <Slider Grid.Column="1" Minimum="0" Maximum="1"
+                                                    Value="{Binding SystemVolume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    AutomationProperties.Name="Windows 系统音量"
+                                                    Style="{StaticResource ConsoleSliderStyle}"
+                                                    ToolTip="此输出设备的 Windows 音量，与系统音量混合器同步；在任意一处调节都会同步到另一处。"
+                                                    VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding SystemVolumePercent}"
+                                                       FontFamily="{StaticResource OutlawFont}" FontSize="13" FontWeight="Bold"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,5,0,0" Opacity="{Binding ProcessingOpacity}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="30"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="42"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="软件" FontFamily="{StaticResource OutlawFont}" FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                            <Slider Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.01" LargeChange="0.1"
+                                                    Value="{Binding SoftwareVolume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    IsEnabled="{Binding CanProcessAudio}"
+                                                    AutomationProperties.Name="SoundSync 软件音量"
+                                                    AutomationProperties.AutomationId="SoftwareVolumeSlider"
+                                                    Style="{StaticResource ConsoleSliderStyle}"
+                                                    ToolTip="{Binding SoftwareVolumeTooltip}" ToolTipService.ShowOnDisabled="True"
+                                                    VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding SoftwareVolumePercent}"
+                                                       FontFamily="{StaticResource OutlawFont}" FontSize="13" FontWeight="Bold"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </StackPanel>
 
                                     <Slider Grid.Column="3" Minimum="0" Maximum="500" Value="{Binding Delay}"
                                             SmallChange="1" LargeChange="10"

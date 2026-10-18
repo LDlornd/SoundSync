@@ -4,7 +4,11 @@ namespace SoundSync.Models
     {
         public string DeviceId { get; set; } = string.Empty;
         public bool IsSelected { get; set; }
-        public float Volume { get; set; }
+        /// <summary>Legacy volume field retained for older profile readers.</summary>
+        public float Volume { get; set; } = 1.0f;
+
+        /// <summary>Separate app gain; profiles written before this feature default to unity.</summary>
+        public float SoftwareVolume { get; set; } = 1.0f;
         public int Delay { get; set; }
         public float Bass { get; set; }
         public float Mid { get; set; }
