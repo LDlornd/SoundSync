@@ -27,6 +27,15 @@ namespace SoundSync.Services
 
         public bool IsConnected => isConnected;
 
+        private readonly Func<MMDevice?, float> readEndpointGain;
+
+        public AudioEngine() : this(MakeUpGainForDevice) { }
+
+        internal AudioEngine(Func<MMDevice?, float> readEndpointGain)
+        {
+            this.readEndpointGain = readEndpointGain;
+        }
+
         public List<MMDevice> GetActiveRenderDevices()
         {
             enumerator ??= new MMDeviceEnumerator();
@@ -162,44 +171,16 @@ namespace SoundSync.Services
                 {
                     // ---- layer 2: distribution -------------------------------------
                     //
-                    // One clean copy of the source, with the default device's volume divided
-                    // back out, that every consumer draws from - the local outputs and the
-                    // network listeners alike. Loopback capture is post-volume, so without
-                    // this step everything downstream inherits whatever the master happened
-                    // to be set to, and a listener on a phone could never reach full level.
+                    // Keep the source meter raw. Optional endpoint-volume compensation is
+                    // applied only to the copy distributed to outputs and network listeners.
+                    // Whether endpoint loopback includes that attenuation depends on the
+                    // device, so its Windows volume must not be used to infer meter levels.
                     //
                     // Per-consumer volume, equaliser and delay come after this, in layer 3,
                     // so no consumer's settings can leak into another's.
-                    RefreshDistributionGain();
-
-                    byte[] source = args.Buffer;
                     int sourceBytes = args.BytesRecorded;
-
-                    float gain = distributionGain;
-                    if (captureIsFloat && Math.Abs(gain - 1.0f) > 0.001f)
-                    {
-                        if (distribution.Length < sourceBytes) distribution = new byte[sourceBytes];
-                        for (int i = 0; i + 3 < sourceBytes; i += 4)
-                        {
-                            float v = BitConverter.ToSingle(args.Buffer, i) * gain;
-                            BitConverter.TryWriteBytes(distribution.AsSpan(i, 4), SoftLimit(v));
-                        }
-                        source = distribution;
-                    }
-
+                    byte[] source = PrepareCapturedAudio(args.Buffer, sourceBytes, captureIsFloat, ref distribution);
                     networkStreamer.BroadcastAudio(source, sourceBytes);
-
-                    // Level of the source itself, before this app or any output touches it.
-                    if (captureIsFloat)
-                    {
-                        float peak = 0f;
-                        for (int i = 0; i + 3 < sourceBytes; i += 4)
-                        {
-                            float v = Math.Abs(BitConverter.ToSingle(source, i));
-                            if (v > peak) peak = v;
-                        }
-                        SourcePeakLevel = Math.Clamp(peak * sourceMeterGain, 0f, 1f);
-                    }
 
                     const int TargetBufferDurationMs = 30;
                     int targetBytes = (int)((TargetBufferDurationMs * captureFormat.AverageBytesPerSecond) / 1000.0);
@@ -260,12 +241,40 @@ namespace SoundSync.Services
             }
         }
 
+        /// <summary>Measures actual captured samples, then optionally compensates audio for distribution.</summary>
+        internal byte[] PrepareCapturedAudio(byte[] captured, int count, bool isFloat, ref byte[] distribution)
+        {
+            RefreshDistributionGain();
+            if (!isFloat) return captured;
+
+            // A device's volume setting does not tell us where its loopback tap sits.
+            // In particular, virtual endpoints can keep capture at full strength while
+            // their Windows volume changes. Never divide a meter by that setting.
+            float peak = 0f;
+            for (int i = 0; i + 3 < count; i += 4)
+            {
+                float level = Math.Abs(BitConverter.ToSingle(captured, i));
+                if (level > peak) peak = level;
+            }
+            SourcePeakLevel = Math.Clamp(peak, 0f, 1f);
+
+            float gain = distributionGain;
+            if (Math.Abs(gain - 1.0f) <= 0.001f) return captured;
+            if (distribution.Length < count) distribution = new byte[count];
+            for (int i = 0; i + 3 < count; i += 4)
+            {
+                float value = BitConverter.ToSingle(captured, i) * gain;
+                BitConverter.TryWriteBytes(distribution.AsSpan(i, 4), SoftLimit(value));
+            }
+            return distribution;
+        }
+
         /// <summary>Builds the per-output DSP path without opening or changing any Windows device.</summary>
         internal ISampleProvider CreateOutputPipeline(DeviceItem item, ISampleProvider source)
         {
             // Meter before this output's processing, so its gain does not hide incoming audio.
             var meter = new MeteringSampleProvider(source, peak =>
-                item.PeakLevel = Math.Clamp(peak * sourceMeterGain, 0f, 1f));
+                item.PeakLevel = Math.Clamp(peak, 0f, 1f));
             var equalizer = new EqualizerSampleProvider(meter)
             {
                 BassDb = item.Bass,
@@ -354,14 +363,6 @@ namespace SoundSync.Services
         }
 
         /// <summary>
-        /// Scale the signal meters use so they read the source material rather than whatever
-        /// the default device's volume happens to be. Always applied, even when the make-up
-        /// gain itself is switched off - a meter that follows a volume knob tells you nothing
-        /// about whether audio is arriving.
-        /// </summary>
-        private volatile float sourceMeterGain = 1.0f;
-
-        /// <summary>
         /// Gain applied once, at the distribution layer, to undo the default device's volume.
         /// Every consumer draws from the result, so no one inherits the master's setting.
         /// </summary>
@@ -394,33 +395,23 @@ namespace SoundSync.Services
             if (usingPreVolumeCapture)
             {
                 distributionGain = 1.0f;
-                sourceMeterGain = 1.0f;
                 return;
             }
 
-            float wanted = makeUpEnabled ? MakeUpGainForDevice(captureSource) : 1.0f;
+            float wanted = makeUpEnabled ? readEndpointGain(captureSource) : 1.0f;
             distributionGain = wanted;
-            sourceMeterGain = makeUpEnabled ? 1.0f : MakeUpGainForDevice(captureSource);
         }
 
-        /// <summary>Peak of the captured source, corrected for the default device's volume.</summary>
+        /// <summary>Peak of the actual captured source, before any SoundSync audio compensation.</summary>
         public float SourcePeakLevel { get; private set; }
-
-        /// <summary>Tells the engine what the default device's volume is right now.</summary>
-        public void SetDefaultDeviceVolume(float volume)
-        {
-            // Only meaningful while the correction is off; ApplyMakeUpGain sets both.
-            if (Math.Abs(distributionGain - 1.0f) < 0.001f) sourceMeterGain = MakeUpGainForDevice(captureSource);
-        }
 
         /// <summary>
         /// Cancels the default device's volume out of the mirrored signal.
         ///
-        /// WASAPI loopback hands over the audio AFTER Windows has applied the default
-        /// device's volume, so a master sitting at 20% means the mirrors only ever receive a
-        /// fifth of the signal - and then attenuate it again with their own volume. Dividing
-        /// it back out gives every mirror the full-strength audio, so its own Windows volume
-        /// is the only thing setting how loud it plays.
+        /// Intended for endpoint loopback paths that include the source device's attenuation.
+        /// Other devices may capture before that control; inverse gain then over-amplifies
+        /// their audio, so compensation must be disabled for those paths. Signal meters
+        /// measure samples directly and never infer attenuation from this control.
         /// </summary>
         public static float MakeUpGainFor(float defaultDeviceVolume)
         {

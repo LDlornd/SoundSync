@@ -344,7 +344,6 @@ namespace SoundSync
             // becomes the only thing setting its level.
             if (isConnected)
             {
-                audioEngine.SetDefaultDeviceVolume(defaultVolume);
                 audioEngine.ApplyMakeUpGain(allItems, defaultVolume, appSettings.IndependentVolumes);
             }
             ApplyRemoteVolumeSync();
@@ -412,9 +411,7 @@ namespace SoundSync
             var defaultItem = allItems.FirstOrDefault(i => i.IsDefaultDevice);
             float reference = defaultItem?.SystemVolume ?? 1.0f;
 
-            // The meters always correct for the master volume, even when the make-up gain
-            // itself is off, so the bars keep showing the material rather than a knob.
-            audioEngine.SetDefaultDeviceVolume(reference);
+            // This option affects audio only; meters measure their actual incoming samples.
             audioEngine.ApplyMakeUpGain(allItems, reference, appSettings.IndependentVolumes);
         }
 
@@ -426,8 +423,8 @@ namespace SoundSync
             if (isConnected) RefreshMakeUpGain();
 
             StatusText.Text = appSettings.IndependentVolumes
-                ? "独立音量已开启：各转发设备接收补偿后的信号，由各自系统音量和软件音量控制。"
-                : "独立音量已关闭：转发设备同时受默认设备和自身音量影响。";
+                ? "源音量补偿已开启：设备回环捕获时按来源设备报告的衰减补偿音频。"
+                : "源音量补偿已关闭：按实际捕获音频转发，软件音量仍可独立调节。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
 
@@ -971,7 +968,7 @@ namespace SoundSync
             bool onStartup = StartupManager.IsEnabled();
             StartupButton.Content = onStartup ? "开机启动：开" : "开机启动：关";
             IndependentVolumesButton.Content = appSettings.IndependentVolumes
-                ? "独立音量：开" : "独立音量：关";
+                ? "源音量补偿：开" : "源音量补偿：关";
             RemoteControlButton.Content = appSettings.AllowRemoteControl
                 ? "远程控制：开" : "远程控制：关";
             StartupButton.ToolTip = onStartup
@@ -1525,10 +1522,8 @@ namespace SoundSync
                     var defaultItem = allItems.FirstOrDefault(i => i.IsDefaultDevice);
                     if (defaultItem == null) return;
 
-                    // Read the level from the captured stream, corrected for this device's
-                    // volume, rather than from AudioMeterInformation. The Windows meter sits
-                    // after the volume control, so its bar shrank as the volume came down and
-                    // disagreed with every other row. This one shows the material itself.
+                    // Show raw captured samples, before SoundSync's optional compensation.
+                    // No inference from the Windows volume slider is applied to the meter.
                     defaultItem.PeakLevel = audioEngine.SourcePeakLevel;
                 }
                 catch { }

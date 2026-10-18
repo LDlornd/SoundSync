@@ -455,9 +455,9 @@
                             <Button x:Name="StartupButton" Content="开机启动：关" Style="{StaticResource HeaderButtonStyle}"
                                     Click="StartupButton_Click" Margin="0,0,8,0"
                                     ToolTip="登录 Windows 时自动启动 SoundSync，并自动连接此处勾选的设备。"/>
-                            <Button x:Name="IndependentVolumesButton" Content="独立音量：开" Style="{StaticResource HeaderButtonStyle}"
+                            <Button x:Name="IndependentVolumesButton" Content="源音量补偿：开" Style="{StaticResource HeaderButtonStyle}"
                                     Click="IndependentVolumesButton_Click" Margin="0,0,8,0"
-                                    ToolTip="Windows 交给 SoundSync 的音频已经受默认设备音量影响。例如主音量为 20% 时，转发设备收到的信号仅为原来的五分之一，随后还会受自身音量再次衰减。&#10;&#10;开启：补偿主音量造成的衰减，让各转发设备主要由各自的 Windows 音量控制。补偿增益上限为 8 倍（18 dB）；主音量低于约 12% 时无法完全恢复。&#10;&#10;关闭：转发设备同时受主音量和自身音量影响。"/>
+                                    ToolTip="部分设备的回环音频会随默认设备音量衰减。开启后，在设备回环捕获时，按设备报告的衰减添加音频增益，最高 8 倍；音量前捕获无需此补偿。&#10;&#10;若虚拟设备出现“系统音量越小，转发声音反而越大”，请关闭补偿，使用各路“软件”音量控制。&#10;&#10;来源信号表始终显示实际捕获电平，不按系统音量反向放大。"/>
                             <Button x:Name="RemoteControlButton" Content="远程控制：开" Style="{StaticResource HeaderButtonStyle}"
                                     Click="RemoteControlButton_Click" Margin="0,0,8,0"
                                     ToolTip="关闭：收听者可以在手机上查看输出设备，但不能修改设置。&#10;&#10;开启：收听者可在收听网页上调整音量、延时以及勾选输出设备。&#10;&#10;默认关闭。分享收听链接不应自动授予修改电脑设置的权限。&#10;&#10;任何持有链接的人都能使用远程控制，请仅在信任收听者时开启。"/>
@@ -518,7 +518,7 @@
             </Grid.ColumnDefinitions>
 
             <TextBlock Text="音频输出设备" ToolTip="列出 Windows 当前启用的所有音频输出设备。勾选需要播放默认设备音频的设备。" Grid.Column="0" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}"/>
-            <TextBlock Text="信号" ToolTip="各输出设备当前收到的音频信号电平。" Grid.Column="1" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+            <TextBlock Text="信号" ToolTip="默认设备显示原始捕获电平；其他设备显示进入该路处理前的电平。信号表不会按系统音量反向放大。" Grid.Column="1" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
             <TextBlock Text="系统 / 软件音量" ToolTip="系统音量会更改 Windows 设备音量；软件音量只调整 SoundSync 转发到此设备的音频。" Grid.Column="2" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
             <TextBlock Text="延时" ToolTip="为各输出设备单独设置延时，让播放不同步的扬声器对齐。" Grid.Column="3" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
             <TextBlock Text="实际延迟" ToolTip="此输出设备当前的实际延迟，单位为毫秒。" Grid.Column="4" FontSize="14" FontFamily="{StaticResource OutlawFont}" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Right"/>
@@ -630,7 +630,7 @@
                                     <ProgressBar Value="{Binding PeakLevel, Mode=OneWay}" 
                                                  Style="{StaticResource VuMeterStyle}" 
                                                  Height="8" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"
-                                                 ToolTip="发送至此设备的实时音频电平；没有波动表示没有音频到达。"/>
+                                                 ToolTip="进入此路处理前的实际音频电平，不受该路软件音量影响；默认设备显示原始捕获电平。"/>
 
                                     <StackPanel Grid.Column="2" Margin="6,0" VerticalAlignment="Center">
                                         <Grid>
