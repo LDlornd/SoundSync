@@ -33,7 +33,7 @@ namespace SoundSync.ViewModels
             set { _isConnected = value; OnPropertyChanged(); }
         }
 
-        private string _statusText = "Status: Disconnected";
+        private string _statusText = "状态：未连接";
         public string StatusText
         {
             get => _statusText;
@@ -54,14 +54,14 @@ namespace SoundSync.ViewModels
             set { _connectButtonTag = value; OnPropertyChanged(); }
         }
 
-        private string _connectButtonText = "ACTIVATE SOUNDSYNC CONSOLE";
+        private string _connectButtonText = "连接并开始音频转发";
         public string ConnectButtonText
         {
             get => _connectButtonText;
             set { _connectButtonText = value; OnPropertyChanged(); }
         }
 
-        private string _updateText = "A NEW UPDATE IS AVAILABLE FOR SOUNDSYNC!";
+        private string _updateText = "SoundSync 有新版本可用！";
         public string UpdateText
         {
             get => _updateText;
@@ -121,7 +121,7 @@ namespace SoundSync.ViewModels
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("Error loading devices: " + ex.Message);
+                System.Windows.MessageBox.Show("加载设备失败：" + ex.Message);
             }
         }
 
@@ -177,7 +177,7 @@ namespace SoundSync.ViewModels
             var selectedDevices = Devices.Where(i => i.IsSelected).ToList();
             if (selectedDevices.Count == 0)
             {
-                System.Windows.MessageBox.Show("Please check at least one device to connect.");
+                System.Windows.MessageBox.Show("请至少勾选一个非默认输出设备。");
                 return;
             }
             try
@@ -185,9 +185,9 @@ namespace SoundSync.ViewModels
                 _audioEngine.Connect(selectedDevices, _networkStreamer, log => { }, () => Disconnect());
                 StartDefaultDevicePeakTimer();
                 IsConnected = true;
-                ConnectButtonText = "DISCONNECT";
+                ConnectButtonText = "断开连接";
                 ConnectButtonTag = "Connected";
-                StatusText = $"Streaming: http://{GetLocalIPAddress()}:8090/?t={Services.LinkAuth.Token} | Routing Audio!";
+                StatusText = $"收听：http://{GetLocalIPAddress()}:8090/?t={Services.LinkAuth.Token} | 正在转发音频";
                 StatusBrushKey = "StatusSuccessBrush";
                 SaveProfile();
             }
@@ -205,9 +205,9 @@ namespace SoundSync.ViewModels
             StopDefaultDevicePeakTimer();
 
             IsConnected = false;
-            ConnectButtonText = "ACTIVATE SOUNDSYNC CONSOLE";
+            ConnectButtonText = "连接并开始音频转发";
             ConnectButtonTag = "Disconnected";
-            StatusText = "Status: Disconnected";
+            StatusText = "状态：未连接";
             StatusBrushKey = "StatusErrorBrush";
         }
 
@@ -264,7 +264,7 @@ namespace SoundSync.ViewModels
                             }
                             _dispatcher.Invoke(() =>
                             {
-                                UpdateText = $"A NEW UPDATE (v{tag}) IS AVAILABLE FOR SOUNDSYNC!";
+                                UpdateText = $"SoundSync 原版有新版本 v{tag} 可用（可能不含汉化）！";
                                 IsUpdateBannerVisible = true;
                             });
                         }

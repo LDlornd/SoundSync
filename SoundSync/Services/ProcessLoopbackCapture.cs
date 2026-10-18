@@ -133,8 +133,8 @@ namespace SoundSync.Services
             if (running) return;
             if (!IsSupported)
                 throw new InvalidOperationException(
-                    $"Pre-volume capture needs Windows 10 build {MinimumWindowsBuild} or newer; " +
-                    $"this machine reports build {Environment.OSVersion.Version.Build}.");
+                    $"音量处理前的音频捕获需要 Windows 10 内部版本 {MinimumWindowsBuild} 或更新系统；" +
+                    $"本机内部版本为 {Environment.OSVersion.Version.Build}。");
 
             IntPtr activationBlob = IntPtr.Zero;
             IntPtr propVariant = IntPtr.Zero;
@@ -159,11 +159,11 @@ namespace SoundSync.Services
                 var handler = new ActivationHandler();
                 int hr = ActivateAudioInterfaceAsync(VirtualDevice, ref IID_IAudioClient,
                                                      propVariant, handler, out var operation);
-                ThrowIfFailed(hr, "activating the process loopback device");
+                ThrowIfFailed(hr, "激活进程回环设备");
 
                 if (!handler.Done.Wait(5000))
-                    throw new TimeoutException("Windows did not answer the process loopback activation.");
-                ThrowIfFailed(handler.ActivateResult, "the process loopback activation result");
+                    throw new TimeoutException("Windows 未响应进程回环设备的激活请求。");
+                ThrowIfFailed(handler.ActivateResult, "获取进程回环激活结果");
 
                 // Released straight away: holding it makes later activations fail.
                 if (operation != null) Marshal.ReleaseComObject(operation);
@@ -187,17 +187,17 @@ namespace SoundSync.Services
                 // AUDCLNT_E_WRONG_ENDPOINT_TYPE.
                 uint flags = StreamFlagsLoopback | StreamFlagsEventCallback;
                 ThrowIfFailed(client.Initialize(ShareModeShared, flags, 0, 0, format, IntPtr.Zero),
-                              "initialising the capture client");
+                              "初始化音频捕获客户端");
 
                 sampleReady = new AutoResetEvent(false);
                 ThrowIfFailed(client.SetEventHandle(sampleReady.SafeWaitHandle.DangerousGetHandle()),
-                              "attaching the capture event");
+                              "绑定音频捕获事件");
 
                 ThrowIfFailed(client.GetService(ref IID_IAudioCaptureClient, out object service),
-                              "obtaining the capture service");
+                              "获取音频捕获服务");
                 capture = (IAudioCaptureClient)service;
 
-                ThrowIfFailed(client.Start(), "starting capture");
+                ThrowIfFailed(client.Start(), "启动音频捕获");
 
                 running = true;
                 worker = new Thread(CaptureLoop)
@@ -263,8 +263,8 @@ namespace SoundSync.Services
         {
             if (hr >= 0) return;
             throw new InvalidOperationException(
-                $"Pre-volume capture failed while {what}: 0x{hr:X8}. " +
-                AudioErrors.DescribeHResult(hr, "the process loopback device"));
+                $"音量处理前的音频捕获在{what}时失败：0x{hr:X8}。" +
+                AudioErrors.DescribeHResult(hr, "进程回环设备"));
         }
 
         public void Dispose()

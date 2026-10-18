@@ -56,7 +56,7 @@ namespace SoundSync.Services
         private static string? cachedToken;
 
         /// <summary>Describes where the current token came from, for the UI to show.</summary>
-        public static string SourceDescription { get; private set; } = "random token stored in the app folder";
+        public static string SourceDescription { get; private set; } = "程序保存的随机令牌";
 
         /// <summary>
         /// Chooses the token source. Pass an empty path for the random stored token, or the
@@ -79,15 +79,15 @@ namespace SoundSync.Services
                 string? derived = DeriveFromKeyFile(keyFile);
                 if (derived != null)
                 {
-                    SourceDescription = $"derived from {keyFile}";
+                    SourceDescription = $"由密钥文件派生：{keyFile}";
                     return derived;
                 }
 
-                SourceDescription = $"could not read {keyFile} - using the random stored token instead";
+                SourceDescription = $"无法读取 {keyFile}，已改用保存的随机令牌";
                 return LoadOrCreateRandom();
             }
 
-            SourceDescription = "random token stored in the app folder";
+            SourceDescription = "程序保存的随机令牌";
             return LoadOrCreateRandom();
         }
 

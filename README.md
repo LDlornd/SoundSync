@@ -1,3 +1,5 @@
+> **简体中文汉化版**：本仓库提供 SoundSync 桌面界面、托盘菜单、操作提示及网络收听网页的简体中文汉化。使用和编译方法请查看 [中文说明](README.zh-CN.md)。下方保留上游英文文档，其中的上游下载链接可能不包含本汉化。
+
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td valign="middle">

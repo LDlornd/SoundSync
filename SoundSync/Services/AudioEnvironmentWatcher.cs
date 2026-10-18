@@ -99,22 +99,22 @@ namespace SoundSync.Services
             {
                 case Microsoft.Win32.SessionSwitchReason.RemoteConnect:
                     Raise(AudioEnvironmentChange.RemoteSession,
-                          "A Remote Desktop session connected, which replaces the audio devices for this session.");
+                          "远程桌面已连接，当前会话的音频设备已改变。");
                     break;
 
                 case Microsoft.Win32.SessionSwitchReason.RemoteDisconnect:
                     Raise(AudioEnvironmentChange.RemoteSession,
-                          "The Remote Desktop session disconnected, so the local audio devices are back.");
+                          "远程桌面已断开，本地音频设备已恢复。");
                     break;
 
                 case Microsoft.Win32.SessionSwitchReason.ConsoleConnect:
                     Raise(AudioEnvironmentChange.ConsoleSession,
-                          "The console session reconnected.");
+                          "本地会话已重新连接。");
                     break;
 
                 case Microsoft.Win32.SessionSwitchReason.ConsoleDisconnect:
                     Raise(AudioEnvironmentChange.ConsoleSession,
-                          "The console session disconnected.");
+                          "本地会话已断开。");
                     break;
             }
         }
@@ -133,19 +133,19 @@ namespace SoundSync.Services
             {
                 owner.Count();
                 owner.Raise(AudioEnvironmentChange.DeviceSet,
-                            $"An output changed state ({newState}).");
+                            $"输出设备状态已改变（{newState}）。");
             }
 
             public void OnDeviceAdded(string deviceId)
             {
                 owner.Count();
-                owner.Raise(AudioEnvironmentChange.DeviceSet, "An output appeared.");
+                owner.Raise(AudioEnvironmentChange.DeviceSet, "检测到新的输出设备。");
             }
 
             public void OnDeviceRemoved(string deviceId)
             {
                 owner.Count();
-                owner.Raise(AudioEnvironmentChange.DeviceSet, "An output was removed.");
+                owner.Raise(AudioEnvironmentChange.DeviceSet, "输出设备已移除。");
             }
 
             public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
@@ -155,7 +155,7 @@ namespace SoundSync.Services
                 // Only the playback default matters here, and only the role the engine uses.
                 if (flow != DataFlow.Render || role != Role.Multimedia) return;
                 owner.Raise(AudioEnvironmentChange.DefaultDevice,
-                            "Windows is sending audio to a different device now.");
+                            "Windows 默认音频输出设备已改变。");
             }
 
             public void OnPropertyValueChanged(string deviceId, PropertyKey key)

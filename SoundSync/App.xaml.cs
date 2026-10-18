@@ -41,8 +41,8 @@ namespace SoundSync
 
                 var resetTask = new JumpTask
                 {
-                    Title = "Reset window size",
-                    Description = "Forget the saved size and position and fit the window to this monitor again.",
+                    Title = "重置窗口大小",
+                    Description = "清除已保存的窗口大小和位置，按当前屏幕重新调整。",
                     ApplicationPath = exe,
                     Arguments = SingleInstanceCommands.ResetWindowArgument,
                     IconResourcePath = exe

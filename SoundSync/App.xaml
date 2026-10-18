@@ -10,6 +10,6 @@
         <FontFamily x:Key="DisplayFont">pack://application:,,,/Fonts/#Chinese Rocks Rg</FontFamily>
 
         <!-- Everything else uses the system UI face so small text stays legible. -->
-        <FontFamily x:Key="OutlawFont">Segoe UI</FontFamily>
+        <FontFamily x:Key="OutlawFont">Microsoft YaHei UI, Microsoft YaHei, Segoe UI</FontFamily>
     </Application.Resources>
 </Application>

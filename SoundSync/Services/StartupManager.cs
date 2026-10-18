@@ -70,7 +70,7 @@ namespace SoundSync.Services
             {
                 using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true)
                                 ?? Registry.CurrentUser.CreateSubKey(RunKey);
-                if (key == null) return "Windows would not open the startup registry key for your account.";
+                if (key == null) return "Windows 无法打开当前账户的开机启动注册表项。";
 
                 if (!enabled)
                 {
@@ -80,19 +80,19 @@ namespace SoundSync.Services
 
                 string exe = ExecutablePath;
                 if (string.IsNullOrEmpty(exe) || !File.Exists(exe))
-                    return "Could not work out where this program is on disk, so it cannot be registered.";
+                    return "无法确定程序路径，不能注册开机启动。";
 
                 key.SetValue(ValueName, $"\"{exe}\" {AutoConnectArgument}", RegistryValueKind.String);
                 return string.Empty;
             }
             catch (UnauthorizedAccessException)
             {
-                return "Windows denied write access to your account's startup list. A policy or security " +
-                       "product may be blocking programs from adding themselves to startup.";
+                return "Windows 拒绝修改当前账户的开机启动列表。系统策略或安全软件" +
+                       "可能阻止了程序添加启动项。";
             }
             catch (Exception ex)
             {
-                return $"Could not update the startup entry: {ex.Message}";
+                return $"无法更新启动项：{ex.Message}";
             }
         }
     }

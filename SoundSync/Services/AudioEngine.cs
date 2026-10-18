@@ -65,7 +65,7 @@ namespace SoundSync.Services
                     }
                     catch (Exception ex)
                     {
-                        logCallback("Falling back to output capture: " + ex.Message);
+                        logCallback("已改用输出设备捕获：" + ex.Message);
                     }
                 }
 
@@ -149,13 +149,13 @@ namespace SoundSync.Services
                 if (outputStreams.Count == 0)
                 {
                     throw new InvalidOperationException(failures.Count > 0
-                        ? "No output could be started.\n\n" + string.Join("\n\n", failures)
-                        : "Tick at least one device other than the default one. The default device is the source being mirrored, so it cannot also be a destination.");
+                        ? "没有可启动的输出设备。\n\n" + string.Join("\n\n", failures)
+                        : "请至少勾选一个非默认设备。默认设备是音频来源，不能同时作为转发目标。");
                 }
 
                 if (failures.Count > 0)
                 {
-                    logCallback($"Mirroring to {outputStreams.Count} device(s); {failures.Count} skipped.");
+                    logCallback($"正在向 {outputStreams.Count} 个设备转发音频；已跳过 {failures.Count} 个设备。");
                 }
 
                 UpdateRelativeDelays(selectedDevices);
@@ -168,9 +168,9 @@ namespace SoundSync.Services
                 }
                 catch (Exception streamError)
                 {
-                    logCallback("Audio mirroring is running, but the phone stream could not start: " +
+                    logCallback("本机音频转发已启动，但手机收听服务启动失败：" +
                                 streamError.Message +
-                                " Another copy of SoundSync, or another program, is using port 8090.");
+                                " 另一个 SoundSync 或其他程序正在使用 8090 端口。");
                 }
 
                 bool captureIsFloat = captureFormat.Encoding == WaveFormatEncoding.IeeeFloat
@@ -263,9 +263,9 @@ namespace SoundSync.Services
                 {
                     if (!isConnected) return;
                     string why = e.Exception != null
-                        ? AudioErrors.Describe(e.Exception, "capture device")
-                        : "The source device stopped providing audio.";
-                    logCallback("Mirroring stopped: " + why);
+                        ? AudioErrors.Describe(e.Exception, "捕获设备")
+                        : "来源设备已停止提供音频。";
+                    logCallback("音频转发已停止：" + why);
                     onDisconnectedCallback();
                 };
 
@@ -278,7 +278,7 @@ namespace SoundSync.Services
                 onDisconnectedCallback();
                 throw new InvalidOperationException(
                     ex is InvalidOperationException ? ex.Message
-                    : "Could not start mirroring.\n\n" + AudioErrors.Describe(ex, "audio engine"), ex);
+                    : "无法启动音频转发。\n\n" + AudioErrors.Describe(ex, "音频引擎"), ex);
             }
         }
 

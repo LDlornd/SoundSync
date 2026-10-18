@@ -33,30 +33,30 @@ namespace SoundSync.Services
         /// </summary>
         public static string Explain(Exception error, string deviceName, WaveFormat captureFormat, MMDevice? device)
         {
-            string outputFormat = "unknown";
+            string outputFormat = "未知";
             int outputChannels = 0;
             try
             {
                 var mix = device?.AudioClient.MixFormat;
                 if (mix != null)
                 {
-                    outputFormat = $"{mix.SampleRate} Hz / {mix.Channels} ch";
+                    outputFormat = $"{mix.SampleRate} Hz / {mix.Channels} 声道";
                     outputChannels = mix.Channels;
                 }
             }
             catch { }
 
-            string source = $"{captureFormat.SampleRate} Hz / {captureFormat.Channels} ch";
+            string source = $"{captureFormat.SampleRate} Hz / {captureFormat.Channels} 声道";
             string detail = Describe(error, deviceName);
 
             string mismatch = string.Empty;
             if (outputChannels > 0 && outputChannels != captureFormat.Channels)
             {
-                mismatch = $"\nThe source is {captureFormat.Channels} channel and this output is {outputChannels} channel, " +
-                           "so the channels have to be remapped.";
+                mismatch = $"\n来源为 {captureFormat.Channels} 声道，此输出为 {outputChannels} 声道，" +
+                           "需要重新映射声道。";
             }
 
-            return $"{deviceName}\n{detail}\nSource: {source}   Output: {outputFormat}{mismatch}";
+            return $"{deviceName}\n{detail}\n来源：{source}   输出：{outputFormat}{mismatch}";
         }
 
         /// <summary>Plain-language description of a single audio failure.</summary>
@@ -69,54 +69,54 @@ namespace SoundSync.Services
             if (root is COMException com) return DescribeHResult(com.ErrorCode, deviceName);
             if (root is ArgumentException)
             {
-                return "Windows rejected the audio format for this output. This is what happens when the " +
-                       "source and the output do not have the same number of channels, or the output was " +
-                       "reconfigured while it was open.";
+                return "Windows 拒绝了此输出设备的音频格式。可能是" +
+                       "来源与输出设备的声道数不一致，或输出设备在" +
+                       "使用过程中被重新配置。";
             }
             if (root is UnauthorizedAccessException)
             {
-                return "Windows denied access to this device. Check Settings > Privacy > Microphone and " +
-                       "app permissions, or whether another program has taken it in exclusive mode.";
+                return "Windows 拒绝访问此设备。请检查“设置 > 隐私 > 麦克风”中的" +
+                       "应用权限，或确认设备是否被其他程序独占。";
             }
             if (root is InvalidOperationException) return root.Message;
 
             int hr = Marshal.GetHRForException(root);
             string known = DescribeHResult(hr, deviceName);
-            return known.StartsWith("Windows reported") ? $"{root.GetType().Name}: {root.Message}" : known;
+            return known.StartsWith("Windows 报告") ? $"{root.GetType().Name}: {root.Message}" : known;
         }
 
         /// <summary>Plain-language description of a Windows audio HRESULT.</summary>
         public static string DescribeHResult(int hr, string deviceName) => hr switch
         {
             UnsupportedFormat =>
-                "This output does not accept that audio format. Its sample rate or channel layout cannot " +
-                "carry what the source device produces.",
+                "此输出设备不支持该音频格式。其采样率或声道布局" +
+                "无法接收来源设备生成的音频。",
             DeviceInUse =>
-                "Another program is holding this device in exclusive mode, which locks everyone else out. " +
-                "Close that program, or turn off \"Allow applications to take exclusive control\" in the " +
-                "device properties in the Windows Sound panel.",
+                "其他程序正以独占模式使用此设备，阻止了其他应用访问。" +
+                "请关闭该程序，或在 Windows 声音控制面板的设备属性中关闭" +
+                "“允许应用程序独占控制该设备”。",
             DeviceInvalidated =>
-                "The device disappeared while it was being opened - unplugged, disabled, or its driver " +
-                "restarted. Press RE-SCAN HARDWARE.",
+                "打开设备时设备已不可用，可能被拔出、禁用，或其驱动" +
+                "已重启。请点击“重新扫描设备”。",
             ExclusiveModeNotAllowed =>
-                "This device is set to refuse shared access, so only one program at a time can use it. " +
-                "Turn off exclusive mode in its properties in the Windows Sound panel.",
+                "此设备拒绝共享访问，同一时间只能由一个程序使用。" +
+                "请在 Windows 声音控制面板的设备属性中关闭独占模式。",
             EndpointCreateFailed =>
-                "Windows could not create the audio endpoint. Usually a driver problem - reinstall or " +
-                "update the sound driver for this device.",
+                "Windows 无法创建音频端点。通常是驱动问题，请重新安装或" +
+                "更新此设备的音频驱动。",
             ServiceNotRunning =>
-                "The Windows Audio service is not running. Start \"Windows Audio\" in services.msc.",
+                "Windows Audio 服务未运行。请在 services.msc 中启动“Windows Audio”。",
             BufferSizeError =>
-                "The requested buffer size is invalid for this device. Its driver wants a different size.",
+                "请求的缓冲区大小不适用于此设备，驱动需要其他大小。",
             CpuUsageExceeded =>
-                "Windows stopped the stream because the machine could not keep up. Close heavy programs, " +
-                "or raise the buffer.",
-            NotInitialized => "The audio client was used before being initialised - an internal ordering bug.",
-            AlreadyInitialized => "The audio client was initialised twice - an internal ordering bug.",
-            NotFound => $"{deviceName} was not found. It may have been unplugged or disabled.",
-            AccessDenied => "Windows denied access to this device.",
-            0 => "The operation failed without reporting a reason.",
-            _ => $"Windows reported error 0x{hr:X8} on this device."
+                "电脑处理速度不足，Windows 已停止音频流。请关闭高负载程序，" +
+                "或增大缓冲区。",
+            NotInitialized => "音频客户端尚未初始化就被使用，这是程序内部调用顺序错误。",
+            AlreadyInitialized => "音频客户端被重复初始化，这是程序内部调用顺序错误。",
+            NotFound => $"未找到 {deviceName}，设备可能已被拔出或禁用。",
+            AccessDenied => "Windows 拒绝访问此设备。",
+            0 => "操作失败，系统未提供原因。",
+            _ => $"Windows 报告此设备发生错误 0x{hr:X8}。"
         };
 
         /// <summary>
@@ -144,13 +144,13 @@ namespace SoundSync.Services
 
             if (busy.Length > 0)
             {
-                return $"Windows refused to switch this output to {requestedRate} Hz because it is playing " +
-                       $"right now ({busy}). Stop that audio and try again.";
+                return $"Windows 无法将此输出切换到 {requestedRate} Hz，因为它正在" +
+                       $"播放音频（{busy}）。请停止播放后重试。";
             }
 
-            return $"Windows refused {requestedRate} Hz on this output. Its driver does not accept that rate " +
-                   "in shared mode, or the device is busy. The rate list is what the hardware reports, and " +
-                   "drivers sometimes advertise more than they will actually switch to.";
+            return $"Windows 无法将此输出设置为 {requestedRate} Hz。设备驱动在共享模式下不接受该采样率，" +
+                   "或设备正在使用中。列表根据硬件报告生成，" +
+                   "驱动报告的某些采样率可能无法实际切换。";
         }
     }
 }

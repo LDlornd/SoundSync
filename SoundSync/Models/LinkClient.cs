@@ -10,7 +10,7 @@ namespace SoundSync.Models
         public string Address { get; set; } = string.Empty;
 
         /// <summary>Friendly device name worked out from the User-Agent.</summary>
-        public string DeviceName { get; set; } = "Unknown device";
+        public string DeviceName { get; set; } = "未知设备";
 
         /// <summary>"browser" for the web page, "player" for VLC and similar.</summary>
         public string Kind { get; set; } = "browser";
@@ -19,7 +19,7 @@ namespace SoundSync.Models
 
         public string ConnectedAtText => ConnectedAt.ToString("HH:mm:ss");
 
-        public string Summary => $"{DeviceName}  ·  {Address}  ·  since {ConnectedAtText}";
+        public string Summary => $"{DeviceName}  ·  {Address}  ·  连接于 {ConnectedAtText}";
 
         /// <summary>Set by the streamer so a volume change here reaches that listener.</summary>
         public Action<LinkClient>? VolumeChanged { get; set; }
@@ -108,19 +108,19 @@ namespace SoundSync.Models
         /// </summary>
         public static string DescribeUserAgent(string? userAgent)
         {
-            if (string.IsNullOrWhiteSpace(userAgent)) return "Unknown device";
+            if (string.IsNullOrWhiteSpace(userAgent)) return "未知设备";
             string ua = userAgent;
 
             bool Has(string s) => ua.Contains(s, StringComparison.OrdinalIgnoreCase);
 
             // Media players first: they rarely pretend to be browsers.
-            if (Has("VLC")) return "VLC player";
+            if (Has("VLC")) return "VLC 播放器";
             if (Has("foobar")) return "foobar2000";
             if (Has("Winamp")) return "Winamp";
-            if (Has("MPV") || Has("mpv")) return "mpv player";
+            if (Has("MPV") || Has("mpv")) return "mpv 播放器";
             if (Has("Lavf") || Has("FFmpeg")) return "FFmpeg / Lavf";
             if (Has("Kodi")) return "Kodi";
-            if (Has("AppleCoreMedia")) return "Apple media player";
+            if (Has("AppleCoreMedia")) return "Apple 媒体播放器";
             if (Has("Music Player Daemon")) return "MPD";
 
             string platform =
@@ -128,10 +128,10 @@ namespace SoundSync.Models
                 Has("iPad") ? "iPad" :
                 Has("iPod") ? "iPod" :
                 Has("Android") ? "Android" :
-                Has("Windows NT") ? "Windows PC" :
+                Has("Windows NT") ? "Windows 电脑" :
                 Has("Macintosh") || Has("Mac OS X") ? "Mac" :
                 Has("CrOS") ? "Chromebook" :
-                Has("Linux") ? "Linux PC" : "Unknown device";
+                Has("Linux") ? "Linux 电脑" : "未知设备";
 
             // Order matters: Edge and Chrome both claim Safari, Chrome also claims Safari.
             string browser =

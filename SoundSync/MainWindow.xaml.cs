@@ -180,7 +180,7 @@ namespace SoundSync
             Show();
             Activate();
 
-            StatusText.Text = $"Window reset to {Width:F0} x {Height:F0}, sized against this monitor.";
+            StatusText.Text = $"窗口已按当前屏幕重置为 {Width:F0} × {Height:F0}。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
 
@@ -265,9 +265,9 @@ namespace SoundSync
                 if (!autoAlignWarned)
                 {
                     autoAlignWarned = true;
-                    StatusText.Text = "Auto-align needs at least two mirrored outputs to compare. " +
-                                      "With one, there is nothing to line it up against - the default device " +
-                                      "cannot be measured or delayed.";
+                    StatusText.Text = "自动对齐至少需要两个转发设备进行比较。" +
+                                      "只有一个时无法对齐；默认设备" +
+                                      "无法测量或延迟。";
                     StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusMutedBrush");
                 }
                 return;
@@ -426,8 +426,8 @@ namespace SoundSync
             if (isConnected) RefreshMakeUpGain();
 
             StatusText.Text = appSettings.IndependentVolumes
-                ? "Mirrors now get the full-strength signal - their own Windows volume sets the level."
-                : "Mirrors now inherit the default device's volume as well as their own.";
+                ? "独立音量已开启：各转发设备接收补偿后的信号，由自身 Windows 音量控制。"
+                : "独立音量已关闭：转发设备同时受默认设备和自身音量影响。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
 
@@ -577,8 +577,8 @@ namespace SoundSync
             PushDeviceSnapshot();
 
             StatusText.Text = appSettings.AllowRemoteControl
-                ? "Listeners can now change this PC's outputs. Anyone holding the link can do it."
-                : "Listeners can see the outputs but not change them.";
+                ? "远程控制已开启：任何持有收听链接的人都能修改本机输出设置。"
+                : "远程控制已关闭：收听者只能查看输出设备。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
 
@@ -638,7 +638,7 @@ namespace SoundSync
             recoveryTimer.Stop();
             recoveryTimer.Start();
 
-            StatusText.Text = reason + " Rebuilding...";
+            StatusText.Text = reason + " 正在重建音频连接……";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusMutedBrush");
         }
 
@@ -668,7 +668,7 @@ namespace SoundSync
                     if (isConnected)
                     {
                         resumeWhenOutputsReturn = false;
-                        StatusText.Text = pendingRecoveryReason + " Mirroring resumed.";
+                        StatusText.Text = pendingRecoveryReason + " 音频转发已恢复。";
                         StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
                         return;
                     }
@@ -677,14 +677,14 @@ namespace SoundSync
                 resumeWhenOutputsReturn = wantsMirroring;
                 StatusText.Text = pendingRecoveryReason +
                                   (wantsMirroring
-                                      ? " Mirroring will resume when the outputs come back."
-                                      : " Device list refreshed.");
+                                      ? " 输出设备恢复后将自动继续转发。"
+                                      : " 设备列表已刷新。");
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusMutedBrush");
             }
             catch (Exception ex)
             {
                 resumeWhenOutputsReturn = wantsMirroring;
-                StatusText.Text = "Could not recover after the audio setup changed: " + ex.Message;
+                StatusText.Text = "音频设置改变后恢复失败：" + ex.Message;
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
             }
         }
@@ -707,7 +707,7 @@ namespace SoundSync
             if (!isConnected || restartingAfterFormatChange) return;
             restartingAfterFormatChange = true;
 
-            StatusText.Text = $"{changed.Name} changed to {changed.SampleRate} Hz - restarting mirroring...";
+            StatusText.Text = $"{changed.Name} 已改为 {changed.SampleRate} Hz，正在重启转发……";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusMutedBrush");
 
             // Give Windows a moment to finish rebuilding the endpoint before reopening it.
@@ -724,13 +724,13 @@ namespace SoundSync
                     ConnectButton_Click(this, new RoutedEventArgs());
                     if (isConnected)
                     {
-                        StatusText.Text = $"Mirroring restarted at {changed.SampleRate} Hz.";
+                        StatusText.Text = $"音频转发已按 {changed.SampleRate} Hz 重新启动。";
                         StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
                     }
                 }
                 catch (Exception ex)
                 {
-                    StatusText.Text = "Could not restart after the format change: " + ex.Message;
+                    StatusText.Text = "音频格式改变后重启失败：" + ex.Message;
                     StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
                 }
                 finally { restartingAfterFormatChange = false; }
@@ -749,8 +749,8 @@ namespace SoundSync
 
             RemotePanel.Visibility = listeners.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             RemoteHeader.Text = listeners.Count == 1
-                ? "REMOTE LISTENERS  -  1 connected"
-                : $"REMOTE LISTENERS  -  {listeners.Count} connected";
+                ? "远程收听设备：1 台已连接"
+                : $"远程收听设备：{listeners.Count} 台已连接";
 
             ApplyRemoteVolumeSync();
             PushDeviceSnapshot();
@@ -799,7 +799,7 @@ namespace SoundSync
         private void HideLinkPanel()
         {
             currentStreamUrl = string.Empty;
-            LinkUrlBox.Text = "(connect to get the address)";
+            LinkUrlBox.Text = "（连接后显示收听地址）";
         }
 
         /// <summary>Shows which key file is in use, or blank for the random stored token.</summary>
@@ -820,7 +820,7 @@ namespace SoundSync
             {
                 var ip = GetLocalIPAddress();
                 ShowLinkPanel($"http://{ip}:8090/?t={LinkAuth.Token}");
-                StatusText.Text = "Phone link token changed - the address above is the new one.";
+                StatusText.Text = "收听令牌已更改，上方已显示新地址。";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
             }
         }
@@ -829,11 +829,11 @@ namespace SoundSync
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
-                Title = "Pick the key file to derive the phone link token from",
+                Title = "选择用于派生收听令牌的密钥文件",
                 CheckFileExists = true,
                 InitialDirectory = Path.GetDirectoryName(LinkAuth.SuggestedKeyFile) ?? string.Empty,
                 FileName = Path.GetFileName(LinkAuth.SuggestedKeyFile),
-                Filter = "All files (*.*)|*.*"
+                Filter = "所有文件 (*.*)|*.*"
             };
 
             if (dialog.ShowDialog(this) == true) ApplyLinkTokenKeyFile(dialog.FileName);
@@ -848,13 +848,13 @@ namespace SoundSync
             try
             {
                 System.Windows.Clipboard.SetText(LinkUrlBox.Text);
-                StatusText.Text = "Phone link copied to the clipboard.";
+                StatusText.Text = "收听链接已复制到剪贴板。";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
             }
             catch (Exception ex)
             {
-                StatusText.Text = "Could not reach the clipboard: " + ex.Message +
-                                  " Select the address and copy it by hand.";
+                StatusText.Text = "无法访问剪贴板：" + ex.Message +
+                                  " 请选中地址后手动复制。";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
             }
         }
@@ -872,7 +872,7 @@ namespace SoundSync
             }
             catch (Exception ex)
             {
-                StatusText.Text = "Could not open a browser: " + ex.Message;
+                StatusText.Text = "无法打开浏览器：" + ex.Message;
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
             }
         }
@@ -933,8 +933,8 @@ namespace SoundSync
 
             int hidden = allItems.Count(i => i.IsHidden);
             ShowHiddenButton.Content = appSettings.ShowHiddenDevices
-                ? $"HIDING OFF ({hidden})"
-                : hidden > 0 ? $"SHOW HIDDEN ({hidden})" : "SHOW HIDDEN";
+                ? $"收起隐藏设备（{hidden}）"
+                : hidden > 0 ? $"显示隐藏设备（{hidden}）" : "显示隐藏设备";
         }
 
         private void HideDevice_Click(object sender, RoutedEventArgs e)
@@ -947,8 +947,8 @@ namespace SoundSync
             ApplyDeviceFilter();
 
             StatusText.Text = item.IsHidden
-                ? $"{item.Name} hidden. Use SHOW HIDDEN at the top to bring it back."
-                : $"{item.Name} is visible again.";
+                ? $"已隐藏 {item.Name}。点击顶部“显示隐藏设备”可找回。"
+                : $"{item.Name} 已恢复显示。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
 
@@ -964,14 +964,14 @@ namespace SoundSync
         private void RefreshHeaderToggles()
         {
             bool onStartup = StartupManager.IsEnabled();
-            StartupButton.Content = onStartup ? "AUTOSTART: ON" : "AUTOSTART: OFF";
+            StartupButton.Content = onStartup ? "开机启动：开" : "开机启动：关";
             IndependentVolumesButton.Content = appSettings.IndependentVolumes
-                ? "INDEPENDENT VOLUMES: ON" : "INDEPENDENT VOLUMES: OFF";
+                ? "独立音量：开" : "独立音量：关";
             RemoteControlButton.Content = appSettings.AllowRemoteControl
-                ? "REMOTE CONTROL: ON" : "REMOTE CONTROL: OFF";
+                ? "远程控制：开" : "远程控制：关";
             StartupButton.ToolTip = onStartup
-                ? "SoundSync starts when you sign in to Windows and reconnects using these same settings. Click to turn off."
-                : "Click to have Windows start SoundSync when you sign in and reconnect automatically with the devices ticked here.";
+                ? "登录 Windows 后自动启动 SoundSync，并按当前设置自动连接。点击关闭。"
+                : "点击后，登录 Windows 时将自动启动 SoundSync，并自动连接已勾选的设备。";
         }
 
         private void StartupButton_Click(object sender, RoutedEventArgs e)
@@ -981,7 +981,7 @@ namespace SoundSync
             string problem = StartupManager.SetEnabled(turningOn);
             if (problem.Length > 0)
             {
-                System.Windows.MessageBox.Show(problem, "Startup");
+                System.Windows.MessageBox.Show(problem, "开机启动");
                 RefreshHeaderToggles();
                 return;
             }
@@ -991,8 +991,8 @@ namespace SoundSync
             RefreshHeaderToggles();
 
             StatusText.Text = turningOn
-                ? "SoundSync will start with Windows and reconnect automatically."
-                : "SoundSync will no longer start with Windows.";
+                ? "SoundSync 将随 Windows 启动并自动连接。"
+                : "SoundSync 已取消开机启动。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
 
@@ -1021,7 +1021,7 @@ namespace SoundSync
                             
                             Dispatcher.Invoke(() =>
                             {
-                                UpdateText.Text = $"A NEW UPDATE (v{tag}) IS AVAILABLE FOR SOUNDSYNC!";
+                                UpdateText.Text = $"SoundSync 原版有新版本 v{tag} 可用（可能不含汉化）！";
                                 UpdateBanner.Visibility = Visibility.Visible;
                             });
                         }
@@ -1121,12 +1121,12 @@ namespace SoundSync
 
             if (isMuted)
             {
-                StatusText.Text = string.IsNullOrEmpty(currentStreamUrl) ? "Status: MUTED (Press M to Unmute)" : $"Streaming: {currentStreamUrl} | MUTED (Press M to Unmute)";
+                StatusText.Text = string.IsNullOrEmpty(currentStreamUrl) ? "状态：已静音（按 M 取消静音）" : $"收听：{currentStreamUrl} | 已静音（按 M 取消静音）";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusMutedBrush");
             }
             else
             {
-                StatusText.Text = string.IsNullOrEmpty(currentStreamUrl) ? "Status: Connected and Routing Audio!" : $"Streaming: {currentStreamUrl} | Routing Audio!";
+                StatusText.Text = string.IsNullOrEmpty(currentStreamUrl) ? "状态：已连接，正在转发音频" : $"收听：{currentStreamUrl} | 正在转发音频";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
             }
         }
@@ -1150,7 +1150,7 @@ namespace SoundSync
             };
 
             var contextMenu = new System.Windows.Controls.ContextMenu();
-            var openItem = new System.Windows.Controls.MenuItem { Header = "Open SoundSync" };
+            var openItem = new System.Windows.Controls.MenuItem { Header = "打开 SoundSync" };
             openItem.Click += (s, e) =>
             {
                 Show();
@@ -1159,13 +1159,13 @@ namespace SoundSync
             };
             var resetItem = new System.Windows.Controls.MenuItem
             {
-                Header = "Reset window size",
-                ToolTip = "Forget the saved size and position, and fit the window to this monitor again. " +
-                          "Useful after unplugging a screen, or if the window ended up somewhere awkward."
+                Header = "重置窗口大小",
+                ToolTip = "清除已保存的窗口大小和位置，按当前屏幕重新调整。" +
+                          "适用于拔掉显示器或窗口位置异常的情况。"
             };
             resetItem.Click += (s, e) => ResetWindowSize();
 
-            var exitItem = new System.Windows.Controls.MenuItem { Header = "Exit" };
+            var exitItem = new System.Windows.Controls.MenuItem { Header = "退出" };
             exitItem.Click += (s, e) =>
             {
                 System.Windows.Application.Current.Shutdown();
@@ -1183,7 +1183,7 @@ namespace SoundSync
             if (WindowState == WindowState.Minimized && notifyIcon != null)
             {
                 Hide();
-                notifyIcon.ShowBalloonTip("SoundSync", "SoundSync is running in the system tray.", Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Info);
+                notifyIcon.ShowBalloonTip("SoundSync", "SoundSync 已最小化到系统托盘，仍在运行。", Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Info);
             }
         }
 
@@ -1219,7 +1219,7 @@ namespace SoundSync
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("Error loading devices: " + ex.Message);
+                System.Windows.MessageBox.Show("加载设备失败：" + ex.Message);
             }
         }
 
@@ -1230,7 +1230,7 @@ namespace SoundSync
 
             if (item.IsDefaultDevice)
             {
-                System.Windows.MessageBox.Show($"{item.Name} is already the system default output.");
+                System.Windows.MessageBox.Show($"{item.Name} 已经是系统默认输出设备。");
                 return;
             }
 
@@ -1242,14 +1242,14 @@ namespace SoundSync
             expectingOwnDefaultChange = true;
             if (!Services.SystemAudioConfig.SetAsDefault(item.Device))
             {
-                System.Windows.MessageBox.Show($"Windows refused to make {item.Name} the default output.");
+                System.Windows.MessageBox.Show($"Windows 无法将 {item.Name} 设为默认输出设备。");
                 return;
             }
 
             ReloadDevices();
 
-            StatusText.Text = $"System default is now: {item.Name}" +
-                              (wasConnected ? " - press CONNECT again to resume mirroring." : "");
+            StatusText.Text = $"系统默认设备已改为：{item.Name}" +
+                              (wasConnected ? "；再次点击“连接”恢复音频转发。" : "");
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
 
@@ -1257,7 +1257,7 @@ namespace SoundSync
         {
             if (isConnected)
             {
-                System.Windows.MessageBox.Show("Please DISCONNECT first before refreshing the device list.");
+                System.Windows.MessageBox.Show("请先断开连接，再刷新设备列表。");
                 return;
             }
             ReloadDevices();
@@ -1360,13 +1360,13 @@ namespace SoundSync
 
             if (isLight)
             {
-                ThemeButtonText.Text = "CAMPFIRE MODE";
+                ThemeButtonText.Text = "切换深色";
                 ThemeIconPath.Data = System.Windows.Media.Geometry.Parse("M9,2C7.95,2 6.95,2.23 6.05,2.63C9,3.87 11,6.7 11,10C11,13.3 9,16.13 6.05,17.37C6.95,17.77 7.95,18 9,18A8,8 0 0,0 17,10A8,8 0 0,0 9,2Z");
                 ThemeButton.Foreground = new System.Windows.Media.SolidColorBrush(ColorFromHex("#8A1212"));
             }
             else
             {
-                ThemeButtonText.Text = "FRONTIER MODE";
+                ThemeButtonText.Text = "切换浅色";
                 ThemeIconPath.Data = System.Windows.Media.Geometry.Parse("M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,2A1,1 0 0,1 13,3V5A1,1 0 0,1 12,6A1,1 0 0,1 11,5V3A1,1 0 0,1 12,2M12,18A1,1 0 0,1 13,19V21A1,1 0 0,1 12,22A1,1 0 0,1 11,21V19A1,1 0 0,1 12,18M2,12A1,1 0 0,1 3,11H5A1,1 0 0,1 6,12A1,1 0 0,1 5,13H3A1,1 0 0,1 2,12M18,12A1,1 0 0,1 19,11H21A1,1 0 0,1 22,12A1,1 0 0,1 21,13H19A1,1 0 0,1 18,12M5.63,4.22A1,1 0 0,1 7.05,4.22L8.46,5.64A1,1 0 0,1 8.46,7.05A1,1 0 0,1 7.05,7.05L5.63,5.64A1,1 0 0,1 5.63,4.22M15.54,14.14A1,1 0 0,1 16.95,14.14L18.36,15.56A1,1 0 0,1 18.36,16.97A1,1 0 0,1 16.95,16.97L15.54,15.56A1,1 0 0,1 15.54,14.14M18.36,4.22A1,1 0 0,1 18.36,5.64L16.95,7.05A1,1 0 0,1 15.54,7.05A1,1 0 0,1 15.54,5.64L16.95,4.22A1,1 0 0,1 18.36,4.22M8.46,14.14A1,1 0 0,1 8.46,16.97L7.05,18.36A1,1 0 0,1 5.63,18.36A1,1 0 0,1 5.63,16.97L7.05,14.14A1,1 0 0,1 8.46,14.14Z");
                 ThemeButton.Foreground = (System.Windows.Media.SolidColorBrush)FindResource("AccentBlueBrush");
             }
@@ -1445,7 +1445,7 @@ namespace SoundSync
             var selectedDevices = items.Where(i => i.IsSelected).ToList();
             if (selectedDevices.Count == 0)
             {
-                System.Windows.MessageBox.Show("Please check at least one device to connect.");
+                System.Windows.MessageBox.Show("请至少勾选一个非默认输出设备。");
                 return;
             }
 
@@ -1474,18 +1474,18 @@ namespace SoundSync
                 RefreshMakeUpGain();
 
                 isMuted = false;
-                ConnectButton.Content = "DISCONNECT";
+                ConnectButton.Content = "断开连接";
                 ConnectButton.Tag = "Connected";
 
                 ShowLinkPanel($"http://{ip}:{port}/?t={Services.LinkAuth.Token}");
-                StatusText.Text = "Routing audio to the ticked outputs.";
+                StatusText.Text = "正在向勾选的设备转发音频。";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
 
                 SaveCurrentProfile();
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("Error starting audio routing: " + ex.Message);
+                System.Windows.MessageBox.Show("启动音频转发失败：" + ex.Message);
                 Disconnect();
             }
         }
@@ -1513,9 +1513,9 @@ namespace SoundSync
             HideLinkPanel();
             RemotePanel.Visibility = Visibility.Collapsed;
             currentStreamUrl = string.Empty;
-            ConnectButton.Content = "ACTIVATE SOUNDSYNC CONSOLE";
+            ConnectButton.Content = "连接并开始音频转发";
             ConnectButton.Tag = "Disconnected";
-            StatusText.Text = "Status: Disconnected";
+            StatusText.Text = "状态：未连接";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
         }
 

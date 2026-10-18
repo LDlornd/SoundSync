@@ -47,7 +47,7 @@ namespace SoundSync.Models
                         // Snap back to what Windows actually has. Leaving the rejected value
                         // on screen would claim a change that never happened.
                         _sampleRate = Services.SystemAudioConfig.GetSampleRate(Device);
-                        SampleRateStatus = "refused";
+                        SampleRateStatus = "未成功";
                         SampleRateTooltip = Services.AudioErrors.ExplainRateRejection(Device, value);
                     }
                 }
@@ -71,11 +71,7 @@ namespace SoundSync.Models
         }
 
         private const string RateTooltipBase =
-            "Windows sample rate for this output - the same setting as Sound panel > Properties > " +
-            "Advanced > Default Format.\n\nThe list shows what this hardware reports it can play. " +
-            "Matching this to the source device's rate removes the real-time resampling step, " +
-            "which lowers both delay and CPU use.\n\nA device that is playing right now will usually " +
-            "refuse to switch.";
+            "此设备的 Windows 采样率，与“声音控制面板 > 属性 > 高级 > 默认格式”相同。\n\n列表显示硬件报告支持的采样率。与来源设备保持一致可省去实时重采样，降低延迟和 CPU 占用。\n\n正在播放音频的设备通常无法切换采样率。";
 
         private string _sampleRateTooltip = RateTooltipBase;
         /// <summary>Explains the picker, or why the last change was refused.</summary>
@@ -94,7 +90,7 @@ namespace SoundSync.Models
         }
 
         /// <summary>Badge text shown beside the name: SOURCE for the current default.</summary>
-        public string DefaultBadge => IsDefaultDevice ? "SYSTEM DEFAULT" : string.Empty;
+        public string DefaultBadge => IsDefaultDevice ? "系统默认" : string.Empty;
 
         /// <summary>
         /// False for the system default device. Its audio is what gets captured and it plays
@@ -181,53 +177,33 @@ namespace SoundSync.Models
             // EndpointFormFactor: 7 UnknownDigitalPassthrough, 8 SPDIF, 9 DigitalAudioDisplayDevice
             if (formFactor == 9)
             {
-                ConnectionBadge = "HDMI DIGITAL - SLOWER";
+                ConnectionBadge = "HDMI 数字 · 较慢";
                 ConnectionTooltip =
-                    "Windows reports this endpoint as a digital display device: HDMI or DisplayPort." + NewParagraph
-                    + "The cable itself is not slow. What is slow is the screen on the far end - televisions and "
-                    + "monitors run their own audio processing after the signal leaves the PC, often tens of "
-                    + "milliseconds. That part happens outside the computer, so no program can see it, measure "
-                    + "it, or subtract it." + NewParagraph
-                    + "So this is usually the LAST device in the room to make a sound." + NewParagraph
-                    + WhySlowestShouldBeDefault;
+                    "Windows 将此设备识别为 HDMI 或 DisplayPort 数字显示设备。\n\n线缆本身延迟很低；电视或显示器在信号离开电脑后还会处理音频，通常增加数十毫秒延迟。这部分发生在电脑外，软件无法测量或抵消。\n\n因此它通常是房间里最晚发声的设备。" + NewParagraph + WhySlowestShouldBeDefault;
             }
             else if (formFactor == 8 || formFactor == 7)
             {
-                ConnectionBadge = "DIGITAL PASSTHROUGH";
+                ConnectionBadge = "数字直通";
                 ConnectionTooltip =
-                    "A digital output such as S/PDIF or optical." + NewParagraph
-                    + "Whatever receiver, soundbar or decoder sits on the far end adds its own delay, outside "
-                    + "the computer and invisible to any program. Treat it as one of the slower devices." + NewParagraph
-                    + WhySlowestShouldBeDefault;
+                    "S/PDIF 或光纤等数字输出。\n\n另一端的功放、回音壁或解码器会引入额外延迟，电脑上的软件无法测量。请将它视作较慢的设备。" + NewParagraph + WhySlowestShouldBeDefault;
             }
             else if (string.Equals(enumerator, "ROOT", StringComparison.OrdinalIgnoreCase))
             {
-                ConnectionBadge = "VIRTUAL";
+                ConnectionBadge = "虚拟设备";
                 ConnectionTooltip =
-                    "A virtual device created by software, not real hardware - a streaming or capture driver." + NewParagraph
-                    + "There is no speaker on the end of it, so mirroring here feeds another program rather than "
-                    + "a room. Timing against it is meaningless: nobody hears it directly.";
+                    "由软件创建的虚拟设备，例如串流或音频捕获驱动。\n\n它没有直接连接扬声器，转发到此设备是在给另一个程序提供音频，因此无法按实际发声时间与其对齐。";
             }
             else if (string.Equals(enumerator, "USB", StringComparison.OrdinalIgnoreCase))
             {
                 ConnectionBadge = "USB";
                 ConnectionTooltip =
-                    "A USB audio device. The USB link adds a small, steady delay of its own - a few "
-                    + "milliseconds - far less than a television adds, but a little more than a jack on the "
-                    + "sound card." + NewParagraph
-                    + "Sits in the middle: usually a good mirror, and it can be delayed to match a slower device." + NewParagraph
-                    + WhySlowestShouldBeDefault;
+                    "USB 音频设备。USB 连接会引入几毫秒的小幅、稳定延迟，通常远小于电视，但略高于声卡上的模拟接口。\n\n通常适合作为转发设备，可添加延时以匹配更慢的设备。" + NewParagraph + WhySlowestShouldBeDefault;
             }
             else if (formFactor >= 0)
             {
-                ConnectionBadge = "ANALOG - FASTER";
+                ConnectionBadge = "模拟输出 · 较快";
                 ConnectionTooltip =
-                    "An analogue output on the sound card: the speaker or headphone jack." + NewParagraph
-                    + "The signal goes straight out through the card's own converter with nothing downstream to "
-                    + "process it, so this is normally the shortest path and the FIRST device to make a sound." + NewParagraph
-                    + "That makes it a good mirror - being early, it has room to be delayed until it lines up "
-                    + "with a slower device." + NewParagraph
-                    + WhySlowestShouldBeDefault;
+                    "声卡上的模拟输出，例如扬声器或耳机插孔。\n\n信号经过声卡转换器后直接输出，通常没有后续处理，因此往往最早发声。\n\n适合作为转发设备，可添加延时以匹配更慢的设备。" + NewParagraph + WhySlowestShouldBeDefault;
             }
         }
 
@@ -236,15 +212,8 @@ namespace SoundSync.Models
 
         /// <summary>Explains the delay slider, including why it is dead on the default device.</summary>
         public string DelayTooltip => IsDefaultDevice
-            ? "Disabled because this is the system default device." + NewParagraph
-              + "Its audio is the source being captured and it plays straight from Windows, so SoundSync "
-              + "never processes it - delaying it is not possible. Delay the outputs that arrive too soon "
-              + "instead, or make a different device the default."
-            : "Hold this output back so it lines up with the others, 0 to 500 ms in 1 ms steps." + NewParagraph
-              + "Delay can only be added: the default device plays straight from Windows and cannot be "
-              + "pulled earlier, so delay the ones that arrive too soon." + NewParagraph
-              + "Click the slider first, then the arrow keys move it 1 ms at a time and the mouse wheel "
-              + "1 ms per notch.";
+            ? "此设备是系统默认输出，无法调节延时。\n\n它是 SoundSync 的音频来源，由 Windows 直接播放，SoundSync 不会处理它。请为较早发声的转发设备添加延时，或将另一个设备设为默认。"
+            : "为此设备添加延时以匹配其他设备。范围为 0 至 500 毫秒，步长为 1 毫秒。\n\n只能延后，不能提前播放。默认设备由 Windows 直接播放，因此应延迟较早发声的转发设备。\n\n先点击滑块，再用方向键可每次调整 1 毫秒，鼠标滚轮每格调整 1 毫秒。";
 
         private static readonly string NewParagraph = Environment.NewLine + Environment.NewLine;
 
@@ -253,29 +222,15 @@ namespace SoundSync.Models
         /// every connection tooltip because it is the thing people get backwards.
         /// </summary>
         private static readonly string WhySlowestShouldBeDefault =
-            "WHY THE SLOWEST DEVICE SHOULD BE THE DEFAULT" + Environment.NewLine
-            + "SoundSync captures whatever the default device plays and copies it to the others. "
-            + "That audio has already left Windows by then, so the default device can only ever be "
-            + "made LATER by adding delay - never earlier." + NewParagraph
-            + "So delay is one-way: it can only be added to the mirrors. If the default is the fastest "
-            + "device, the slow ones are already behind and there is nothing left to do - you would have "
-            + "to delay the default, which is impossible." + NewParagraph
-            + "Make the SLOWEST device the default. Then every mirror is early, and each one can be held "
-            + "back until it lands together with it.";
+            "为什么建议把最慢的设备设为默认\nSoundSync 捕获默认设备的音频，并复制到其他设备。默认设备直接由 Windows 播放，SoundSync 无法为它添加延时，也无法让它提前发声。\n\n延时只能添加到转发设备。如果默认设备最快，其他较慢设备已落后，SoundSync 无法靠延迟默认设备来补偿。\n\n将最慢的设备设为默认后，其他设备通常会较早发声，可分别为它们添加延时来对齐。";
 
         /// <summary>Explains the SYSTEM DEFAULT badge and the rule behind choosing it.</summary>
         public string DefaultBadgeTooltip =>
-            "Windows is sending all system audio here right now." + NewParagraph
-            + "This is the device SoundSync captures from - the source. It cannot also be a destination, "
-            + "so its tick box, delay and equaliser are switched off." + NewParagraph
-            + WhySlowestShouldBeDefault;
+            "Windows 当前将系统音频发送到此设备。\n\n这是 SoundSync 捕获的音频来源，不能同时作为转发目标，因此其勾选框、延时和均衡器不可用。" + NewParagraph + WhySlowestShouldBeDefault;
 
         /// <summary>Explains the SET AS DEFAULT button, including when you would want it.</summary>
         public string SetAsDefaultTooltip =>
-            "Make this the output Windows sends everything to, for all three roles." + NewParagraph
-            + "SoundSync captures FROM the default device, so this also changes what gets copied to the "
-            + "others. If mirroring is running it stops first - press CONNECT again afterwards." + NewParagraph
-            + WhySlowestShouldBeDefault;
+            "将此设备设为 Windows 所有音频角色的默认输出。\n\nSoundSync 从默认设备捕获音频，因此这也会改变转发来源。如果正在转发，会先停止；之后再次点击“连接”即可继续。" + NewParagraph + WhySlowestShouldBeDefault;
 
         /// <summary>Reads the current rate and the supported list from Windows.</summary>
         public void LoadSystemFormat()

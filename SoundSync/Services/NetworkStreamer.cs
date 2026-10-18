@@ -196,7 +196,7 @@ namespace SoundSync.Services
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to bind streaming network target on port {port}.", ex);
+                throw new InvalidOperationException($"无法在端口 {port} 上启动网络音频服务。", ex);
             }
 
             isRunning = true;
@@ -240,7 +240,7 @@ namespace SoundSync.Services
                 // access token derived from the operator's SSH key. See LinkAuth.
                 if (!LinkAuth.IsRequestAuthorized(headers[0]))
                 {
-                    byte[] deniedBody = Encoding.UTF8.GetBytes("401 Unauthorized");
+                    byte[] deniedBody = Encoding.UTF8.GetBytes("401 未授权：请使用包含有效令牌的完整收听链接。");
                     string deniedHeader = "HTTP/1.1 401 Unauthorized\r\n" +
                                           "Content-Type: text/plain; charset=utf-8\r\n" +
                                           $"Content-Length: {deniedBody.Length}\r\n" +
@@ -498,10 +498,10 @@ namespace SoundSync.Services
         {
             // Keep original template exact
             return @"<!DOCTYPE html>
-<html lang='en'>
+<html lang='zh-CN'>
 <head>
     <meta charset='UTF-8'>
-    <title>SoundSync Link - Outlaw Edition</title>
+    <title>SoundSync 网络收听 · 简体中文版</title>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <link href='https://fonts.googleapis.com/css2?family=Georgia:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap' rel='stylesheet'>
     <style>
@@ -539,7 +539,7 @@ namespace SoundSync.Services
                 radial-gradient(circle at 50% 50%, rgba(20, 15, 12, 0.8) 0%, rgba(10, 8, 8, 0.95) 100%),
                 repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 2px);
             color: var(--text-primary);
-            font-family: 'Georgia', serif;
+            font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
             display: flex;
             align-items: flex-start;
             justify-content: center;
@@ -603,7 +603,7 @@ namespace SoundSync.Services
             transition: transform 0.2s ease;
         }
         .logo-text {
-            font-family: 'Chinese Rocks Rg', 'Georgia', serif;
+            font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
             font-size: 32px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -625,7 +625,7 @@ namespace SoundSync.Services
             text-align: left;
         }
         .hud-label {
-            font-family: 'Chinese Rocks Rg', 'Georgia', serif;
+            font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
             font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -637,20 +637,20 @@ namespace SoundSync.Services
             border: 1px solid var(--border); background: rgba(0,0,0,0.25); padding: 14px 16px;
         }
         .ctl-check { display: flex; align-items: center; gap: 8px; cursor: pointer;
-                     font-family: 'JetBrains Mono', monospace; font-size: 12px;
+                     font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', monospace; font-size: 12px;
                      letter-spacing: 1px; color: var(--text-primary); flex: 1; }
         .ctl-check input { width: 18px; height: 18px; accent-color: var(--accent); }
         .ctl-row.disabled { opacity: 0.35; pointer-events: none; }
         .ctl-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-        .ctl-label { font-family: 'JetBrains Mono', monospace; font-size: 12px;
+        .ctl-label { font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', monospace; font-size: 12px;
                      letter-spacing: 1px; color: var(--text-secondary); width: 62px; }
         .ctl-row input[type=range] { flex: 1; accent-color: var(--accent); height: 26px; }
-        .ctl-value { font-family: 'JetBrains Mono', monospace; font-size: 12px;
+        .ctl-value { font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', monospace; font-size: 12px;
                      color: var(--text-primary); width: 58px; text-align: right; }
         .ctl-hint { font-size: 11px; line-height: 1.5; color: var(--text-secondary);
                     margin: 6px 0 0 0; }
         .hud-value {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', monospace;
             font-size: 16px;
             font-weight: 700;
             color: var(--text-primary);
@@ -684,7 +684,7 @@ namespace SoundSync.Services
         }
         .visualizer-placeholder {
             color: var(--text-secondary);
-            font-family: 'Chinese Rocks Rg', 'Georgia', serif;
+            font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
             font-size: 16px;
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -709,7 +709,7 @@ namespace SoundSync.Services
             border: 2px solid var(--border);
             width: 100%;
             padding: 18px;
-            font-family: 'Chinese Rocks Rg', 'Georgia', serif;
+            font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
             font-size: 20px;
             text-transform: uppercase;
             letter-spacing: 1.5px;
@@ -765,11 +765,11 @@ namespace SoundSync.Services
         </div>
         <div class='status-hud'>
             <div class='hud-item'>
-                <div class='hud-label'>Connection</div>
-                <div class='hud-value' id='statusVal'>IDLE</div>
+                <div class='hud-label'>连接状态</div>
+                <div class='hud-value' id='statusVal'>未连接</div>
             </div>
             <div class='hud-item'>
-                <div class='hud-label'>Sample Rate</div>
+                <div class='hud-label'>采样率</div>
                 <div class='hud-value' id='rateHud'>{{SAMPLE_RATE}} Hz</div>
             </div>
         </div>
@@ -779,53 +779,46 @@ namespace SoundSync.Services
                 <svg viewBox='0 0 24 24'>
                     <path d='M12 2v20M17 5v14M22 9v6M7 5v14M2 9v6' stroke-linecap='round'></path>
                 </svg>
-                <span>Tap Connect to play stream</span>
+                <span>点击下方按钮开始收听</span>
             </div>
         </div>
         <div class='controls' id='controls' style='display:none'>
             <div class='ctl-row'>
                 <label class='ctl-check'>
                     <input type='checkbox' id='syncCtl'>
-                    <span>REAL-TIME SYNC</span>
+                    <span>实时同步</span>
                 </label>
                 <span class='ctl-value' id='syncVal'></span>
             </div>
-            <p class='ctl-hint' id='syncHint'>Off: the buffer below is whatever you set, and if the
-               stream falls behind - locking the phone, a weak signal - it stays behind.
-               On: playback speeds up by up to 2% until it catches up with the PC, and the buffer
-               is chosen for you. A gap too large to stretch away is skipped instead.</p>
+            <p class='ctl-hint' id='syncHint'>关闭：使用下方手动设置的缓冲；锁屏或信号较弱导致落后时，可能持续不同步。开启：自动控制缓冲，并适当加快播放以追赶电脑；落后过多时会跳过积压音频。</p>
             <div class='ctl-row'>
                 <label class='ctl-check'>
                     <input type='checkbox' id='vsyncCtl'>
-                    <span>VOLUME SYNC WITH PC</span>
+                    <span>音量跟随电脑</span>
                 </label>
             </div>
-            <p class='ctl-hint'>Off: this device's volume is its own, and the PC's volume does
-               not touch it. On: it follows the PC, keeping the balance it had when you ticked
-               it. The same tick appears next to this listener on the PC, and either side can
-               change it.</p>
+            <p class='ctl-hint'>关闭：此设备音量独立，不受电脑音量影响。开启：按勾选时的音量比例跟随电脑。电脑端远程收听列表中的“同步”选项与此处保持一致，可在任一端修改。</p>
             <div class='ctl-row'>
-                <label class='ctl-label' for='volCtl'>VOLUME</label>
+                <label class='ctl-label' for='volCtl'>音量</label>
                 <input type='range' id='volCtl' min='0' max='150' value='100'>
                 <span class='ctl-value' id='volVal'>100%</span>
             </div>
             <div class='ctl-row'>
-                <label class='ctl-label' for='bufCtl'>BUFFER</label>
+                <label class='ctl-label' for='bufCtl'>缓冲</label>
                 <input type='range' id='bufCtl' min='20' max='500' step='10' value='50'>
                 <span class='ctl-value' id='bufVal'>50 ms</span>
             </div>
-            <p class='ctl-hint'>Volume is local to this device and changes nothing on the PC.
-               Buffer trades delay against dropouts: lower is tighter, higher survives a weak signal.</p>
+            <p class='ctl-hint'>音量仅影响此设备，不会修改电脑音量。缓冲越小延迟越低；缓冲越大越能抵抗弱信号造成的断续。</p>
         </div>
 
         <div class='controls' id='pcPanel' style='display:none'>
-            <div class='ctl-row'><span class='ctl-label' style='width:auto'>PC OUTPUTS</span>
+            <div class='ctl-row'><span class='ctl-label' style='width:auto'>电脑输出设备</span>
                 <span class='ctl-value' id='pcMode' style='width:auto'></span></div>
             <div id='pcList'></div>
         </div>
 
         <button class='btn-connect' id='playBtn'>
-            <span id='btnText'>CONNECT RECEIVER</span>
+            <span id='btnText'>连接并收听</span>
         </button>
     </div>
     <script>
@@ -1083,7 +1076,7 @@ namespace SoundSync.Services
         // Draws the PC's outputs. Read-only unless the PC has remote control switched on.
         function renderDevices(msg) {
             pcControllable = !!msg.controllable;
-            pcMode.innerText = pcControllable ? 'control enabled' : 'view only';
+            pcMode.innerText = pcControllable ? '允许控制' : '仅可查看';
             pcPanel.style.display = 'block';
             pcList.innerHTML = '';
 
@@ -1101,7 +1094,7 @@ namespace SoundSync.Services
                 label.className = 'ctl-label';
                 label.style.width = 'auto';
                 label.style.flex = '1';
-                label.innerText = d.name + (d.isDefault ? '  [SOURCE]' : '') + (d.badge ? '  ' + d.badge : '');
+                label.innerText = d.name + (d.isDefault ? '  [音频来源]' : '') + (d.badge ? '  ' + d.badge : '');
 
                 const vol = document.createElement('input');
                 vol.type = 'range'; vol.min = 0; vol.max = 100;
@@ -1122,7 +1115,7 @@ namespace SoundSync.Services
                     const dRow = document.createElement('div');
                     dRow.className = 'ctl-row';
                     const dLab = document.createElement('span');
-                    dLab.className = 'ctl-label'; dLab.innerText = 'DELAY';
+                    dLab.className = 'ctl-label'; dLab.innerText = '延时';
                     const dSlide = document.createElement('input');
                     dSlide.type = 'range'; dSlide.min = 0; dSlide.max = 500; dSlide.value = d.delay;
                     dSlide.disabled = !pcControllable;
@@ -1154,10 +1147,10 @@ namespace SoundSync.Services
             audioCtx = null;
             controls.style.display = 'none';
             pcPanel.style.display = 'none';
-            btnText.innerText = 'CONNECT RECEIVER';
+            btnText.innerText = '连接并收听';
             playBtn.classList.remove('active');
             playBtn.style.background = '';
-            statusVal.innerText = 'IDLE';
+            statusVal.innerText = '未连接';
             statusVal.style.color = '';
             visualizerBox.classList.remove('active');
             bgGlow.classList.remove('active');
@@ -1218,21 +1211,21 @@ namespace SoundSync.Services
             if (!routed) gainNode.connect(audioCtx.destination);
 
             controls.style.display = 'block';
-            btnText.innerText = 'ESTABLISHING...';
+            btnText.innerText = '正在连接……';
             playBtn.style.background = '';
-            statusVal.innerText = 'NEGOTIATING';
+            statusVal.innerText = '正在协商';
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             ws = new WebSocket(`${protocol}//${window.location.host}/?t={{TOKEN}}`);
             ws.binaryType = 'arraybuffer';
             ws.onopen = () => {
-                btnText.innerText = 'STREAM ACTIVE';
+                btnText.innerText = '正在收听 · 点击断开';
                 playBtn.classList.add('active');
                 playBtn.style.background = '';
                 if (audioCtx.state === 'suspended') {
-                    statusVal.innerText = 'TAP AGAIN TO ALLOW AUDIO';
+                    statusVal.innerText = '请再次点击以允许播放音频';
                     statusVal.style.color = 'var(--error)';
                 } else {
-                    statusVal.innerText = 'CONNECTED';
+                    statusVal.innerText = '已连接';
                     statusVal.style.color = 'var(--success)';
                 }
                 visualizerBox.classList.add('active');
@@ -1296,11 +1289,11 @@ namespace SoundSync.Services
                         // Bigger than anything worth shaving away a few milliseconds at a
                         // time: jump, and take the one audible gap instead of a long one.
                         startTime = audioCtx.currentTime + AUTO_TARGET;
-                        syncVal.innerText = 'resync';
+                        syncVal.innerText = '正在重新同步';
                     } else if (queued > AUTO_TARGET * 1.5) {
                         const wantMs = Math.min(MAX_TRIM_MS, (queued - AUTO_TARGET) * 1000);
                         floatData = trimQuietest(floatData, channels, wantMs);
-                        syncVal.innerText = Math.round(queued * 1000) + ' ms, catching up';
+                        syncVal.innerText = Math.round(queued * 1000) + ' 毫秒，正在追赶进度';
                     } else {
                         syncVal.innerText = Math.round(queued * 1000) + ' ms';
                     }
@@ -1329,10 +1322,10 @@ namespace SoundSync.Services
                 startTime += audioBuffer.duration;
             };
             ws.onclose = () => {
-                btnText.innerText = 'DISCONNECTED';
+                btnText.innerText = '已断开 · 点击重连';
                 playBtn.classList.remove('active');
                 playBtn.style.background = 'var(--error)';
-                statusVal.innerText = 'CLOSED';
+                statusVal.innerText = '连接已关闭';
                 statusVal.style.color = 'var(--error)';
                 visualizerBox.classList.remove('active');
                 bgGlow.classList.remove('active');
