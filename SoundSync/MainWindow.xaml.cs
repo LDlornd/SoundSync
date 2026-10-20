@@ -35,6 +35,13 @@ namespace SoundSync
         private List<DeviceItem> allItems = new List<DeviceItem>();
         private AppSettings appSettings = new AppSettings();
         private bool startupInitialized;
+        private bool closing;
+        private int connectionGeneration;
+        private readonly ReconnectController reconnect;
+        private System.Windows.Threading.DispatcherTimer? reconnectTimer;
+        private bool restoreMuteAfterReconnect;
+        private string lastConnectionIssue = string.Empty;
+        private ConnectionLog? connectionLog;
 
         private readonly IAudioEngine audioEngine = new AudioEngine();
         private bool isConnected => audioEngine.IsConnected;
@@ -59,6 +66,8 @@ namespace SoundSync
 
         public MainWindow()
         {
+            reconnect = new ReconnectController(TryReconnect, ScheduleReconnectTimer,
+                () => reconnectTimer?.Stop(), ShowReconnectPending);
             // Ensure data directory exists before running file configuration components
             try
             {
@@ -227,7 +236,7 @@ namespace SoundSync
             // Restore device selections and gains before opening any output. Use Connect
             // directly: a queued startup action must never toggle an existing connection off.
             Dispatcher.BeginInvoke(new Action(() =>
-                AppCommands.TryAutoConnect(appSettings, allItems, isConnected, Connect)),
+                AppCommands.TryAutoConnect(appSettings, allItems, isConnected, () => StartConnection(automatic: true))),
                 System.Windows.Threading.DispatcherPriority.Background);
         }
 
@@ -589,7 +598,6 @@ namespace SoundSync
         private System.Windows.Threading.DispatcherTimer? recoveryTimer;
         private string pendingRecoveryReason = string.Empty;
         private bool expectingOwnDefaultChange;
-        private bool resumeWhenOutputsReturn;
 
         private void StartEnvironmentWatcher()
         {
@@ -613,9 +621,8 @@ namespace SoundSync
         /// </summary>
         private void ScheduleRecovery(AudioEnvironmentChange kind, string reason)
         {
-            // A sample rate change raises device notifications of its own, and that path
-            // already rebuilds the session with a message of its own. Let it finish.
-            if (restartingAfterFormatChange) return;
+            // Device and format notifications share one coalesced recovery path.
+            if (closing) return;
 
             // Same for the app switching the default output itself: the button handler has
             // already stopped, switched and reloaded, and it says something more useful than
@@ -627,6 +634,7 @@ namespace SoundSync
             }
 
             pendingRecoveryReason = reason;
+            if (isConnected) reconnect.RequestConnection();
 
             recoveryTimer ??= new System.Windows.Threading.DispatcherTimer
             {
@@ -646,52 +654,23 @@ namespace SoundSync
         private void RecoveryTick(object? sender, EventArgs e)
         {
             recoveryTimer?.Stop();
-
-            // Remembered across events, because the outputs usually come back later than
-            // they went away. Connecting over Remote Desktop takes every physical output
-            // out of the session and leaves one "Remote Audio" endpoint behind - measured
-            // on this machine, where a set of five outputs became that single one - so
-            // there is nothing to mirror to until the session is handed back. Without
-            // remembering, mirroring would stop on the way out and never start again.
-            bool wantsMirroring = isConnected || resumeWhenOutputsReturn;
-
-            try
+            if (closing) return;
+            lastConnectionIssue = pendingRecoveryReason;
+            if (reconnect.WantsConnection && appSettings.AutoReconnectEnabled)
             {
-                if (isConnected) Disconnect();
-                ReloadDevices();
-
-                bool haveTargets = allItems.Any(i => i.IsSelected && !i.IsDefaultDevice);
-
-                if (wantsMirroring && haveTargets)
-                {
-                    Connect();
-                    if (isConnected)
-                    {
-                        resumeWhenOutputsReturn = false;
-                        StatusText.Text = pendingRecoveryReason + " 音频转发已恢复。";
-                        StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
-                        return;
-                    }
-                }
-
-                resumeWhenOutputsReturn = wantsMirroring;
-                StatusText.Text = pendingRecoveryReason +
-                                  (wantsMirroring
-                                      ? " 输出设备恢复后将自动继续转发。"
-                                      : " 设备列表已刷新。");
-                StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusMutedBrush");
+                reconnect.StopRetries();
+                if (!TryReconnect()) reconnect.Retry(enabled: true);
             }
-            catch (Exception ex)
+            else
             {
-                resumeWhenOutputsReturn = wantsMirroring;
-                StatusText.Text = "音频设置改变后恢复失败：" + ex.Message;
+                if (isConnected) { SaveCurrentProfile(); Disconnect(); }
+                ReloadDevices(quiet: true);
+                StatusText.Text = pendingRecoveryReason + " 设备列表已刷新。";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
             }
         }
 
         // ---- recovering from a device format change ----------------------------------
-
-        private bool restartingAfterFormatChange;
 
         /// <summary>
         /// Restarts mirroring after an endpoint's sample rate changed.
@@ -704,38 +683,8 @@ namespace SoundSync
         /// </summary>
         private void HandleFormatChanged(DeviceItem changed)
         {
-            if (!isConnected || restartingAfterFormatChange) return;
-            restartingAfterFormatChange = true;
-
-            StatusText.Text = $"{changed.Name} 已改为 {changed.SampleRate} Hz，正在重启转发……";
-            StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusMutedBrush");
-
-            // Give Windows a moment to finish rebuilding the endpoint before reopening it.
-            var settle = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(900)
-            };
-            settle.Tick += (s, e) =>
-            {
-                settle.Stop();
-                try
-                {
-                    Disconnect();
-                    ConnectButton_Click(this, new RoutedEventArgs());
-                    if (isConnected)
-                    {
-                        StatusText.Text = $"音频转发已按 {changed.SampleRate} Hz 重新启动。";
-                        StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    StatusText.Text = "音频格式改变后重启失败：" + ex.Message;
-                    StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
-                }
-                finally { restartingAfterFormatChange = false; }
-            };
-            settle.Start();
+            if (!isConnected && !reconnect.IsPending) return;
+            ScheduleRecovery(AudioEnvironmentChange.DeviceSet, $"{changed.Name} 的采样率已改为 {changed.SampleRate} Hz。");
         }
 
         // ---- listeners on the network ------------------------------------------------
@@ -905,9 +854,10 @@ namespace SoundSync
         /// so the filter has to run *after* the profile restores those flags. Doing it the
         /// other way round made every hidden device reappear on refresh.
         /// </summary>
-        private void ReloadDevices()
+        private void ReloadDevices(bool quiet = false)
         {
-            LoadDevices();
+            DetachVolumeSync();
+            LoadDevices(quiet);
             LoadSavedProfile();
             ApplyDeviceFilter();
             RefreshHeaderToggles();
@@ -964,6 +914,7 @@ namespace SoundSync
                 ? "远程控制：开" : "远程控制：关";
             AutoStartForwardingCheckBox.IsChecked = appSettings.AutoStartForwarding;
             KeyboardShortcutsCheckBox.IsChecked = appSettings.KeyboardShortcutsEnabled;
+            AutoReconnectCheckBox.IsChecked = appSettings.AutoReconnectEnabled;
             ShortcutHints.Opacity = appSettings.KeyboardShortcutsEnabled ? 1.0 : 0.45;
             StartupButton.ToolTip = onStartup
                 ? "登录 Windows 后自动打开 SoundSync。是否自动转发由底部“启动后自动转发”开关控制。点击关闭开机启动。"
@@ -1074,6 +1025,25 @@ namespace SoundSync
             StatusText.Foreground = (Brush)FindResource("StatusSuccessBrush");
         }
 
+        private void AutoReconnectCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            appSettings.AutoReconnectEnabled = AutoReconnectCheckBox.IsChecked == true;
+            SaveAppSettings();
+            RefreshHeaderToggles();
+            if (!appSettings.AutoReconnectEnabled)
+            {
+                reconnect.StopRetries();
+                if (!isConnected)
+                {
+                    ConnectButton.Content = "连接并开始音频转发";
+                    ConnectButton.Tag = "Disconnected";
+                }
+                StatusText.Text = "掉线自动重连已关闭。";
+            }
+            else if (!isConnected && reconnect.WantsConnection) reconnect.Retry(enabled: true);
+            else StatusText.Text = "掉线自动重连已开启。";
+        }
+
         private void Slider_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
         {
             if (sender is not System.Windows.Controls.Slider slider) return;
@@ -1180,13 +1150,19 @@ namespace SoundSync
             }
         }
 
-        private void LoadDevices()
+        private void LoadDevices(bool quiet = false)
         {
+            var previousDevices = allDevices;
             try
             {
-                var enumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
-                var defaultDevice = enumerator.GetDefaultAudioEndpoint(NAudio.CoreAudioApi.DataFlow.Render, NAudio.CoreAudioApi.Role.Multimedia);
-
+                using var enumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
+                string? defaultId = null;
+                try
+                {
+                    using var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                    defaultId = defaultDevice.ID;
+                }
+                catch { } // No default endpoint is normal while the audio service recovers.
                 allDevices = audioEngine.GetActiveRenderDevices();
                 var items = allDevices.Select(d => {
                     var item = new DeviceItem
@@ -1196,7 +1172,7 @@ namespace SoundSync
                         // New profiles start with an unattenuated mirrored stream.
                         // Its gain is separate from the Windows endpoint volume.
                         SoftwareVolume = 1.0f,
-                        IsDefaultDevice = (d.ID == defaultDevice.ID),
+                        IsDefaultDevice = (d.ID == defaultId),
                         DelayChangedCallback = () => Dispatcher.BeginInvoke(new Action(UpdateRelativeDelays)),
                         FormatChangedCallback = changed => Dispatcher.BeginInvoke(new Action(() => HandleFormatChanged(changed))),
                         SoftwareVolumeChangedCallback = ScheduleSoftwareVolumeSave
@@ -1212,7 +1188,17 @@ namespace SoundSync
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("加载设备失败：" + ex.Message);
+                allItems = new List<DeviceItem>();
+                allDevices = new List<MMDevice>();
+                DeviceListBox.ItemsSource = allItems;
+                lastConnectionIssue = "加载设备失败：" + ex.Message;
+                WriteConnectionLog(lastConnectionIssue);
+                if (!quiet) System.Windows.MessageBox.Show(lastConnectionIssue);
+            }
+            finally
+            {
+                foreach (var device in previousDevices ?? new List<MMDevice>())
+                    try { device.Dispose(); } catch { }
             }
         }
 
@@ -1230,6 +1216,8 @@ namespace SoundSync
             // The engine captures from whatever the default device is, so a switch while
             // connected would leave it mirroring the old source. Stop first, then reconnect.
             bool wasConnected = audioEngine.IsConnected;
+            reconnect.Cancel();
+            recoveryTimer?.Stop();
             if (wasConnected) Disconnect();
 
             expectingOwnDefaultChange = true;
@@ -1418,11 +1406,12 @@ namespace SoundSync
         {
             // Pressing the button settles the question either way: a deliberate DISCONNECT
             // must not be undone later by outputs reappearing.
-            resumeWhenOutputsReturn = false;
-
-            if (isConnected)
+            if (isConnected || reconnect.IsPending)
             {
+                reconnect.Cancel();
+                recoveryTimer?.Stop();
                 Disconnect();
+                WriteConnectionLog("用户手动停止转发或自动重连。");
             }
             else
             {
@@ -1430,18 +1419,37 @@ namespace SoundSync
             }
         }
 
-        private void Connect()
+        private void Connect() => StartConnection(automatic: false);
+
+        private void StartConnection(bool automatic)
         {
+            if (!allItems.Any(i => i.IsSelected && !i.IsDefaultDevice))
+            {
+                if (!automatic) System.Windows.MessageBox.Show("请至少勾选一个非默认输出设备。");
+                return;
+            }
+            reconnect.RequestConnection();
+            if (!ConnectCore(automatic)) reconnect.Retry(appSettings.AutoReconnectEnabled);
+        }
+
+        private bool ConnectCore(bool automatic)
+        {
+            if (closing) return false;
+            if (isConnected) return true;
             // Hiding a configured output must not remove it from startup/manual routing.
             var selectedDevices = allItems.Where(i => i.IsSelected && !i.IsDefaultDevice).ToList();
             if (selectedDevices.Count == 0)
             {
-                System.Windows.MessageBox.Show("请至少勾选一个非默认输出设备。");
-                return;
+                lastConnectionIssue = "等待已配置的转发设备恢复。";
+                return false;
             }
 
             try
             {
+                int generation = ++connectionGeneration;
+                WriteConnectionLog(automatic ? "开始自动连接。" : "开始手动连接。");
+                foreach (var item in selectedDevices)
+                    item.IsSoftwareMuted = automatic && restoreMuteAfterReconnect;
                 string ip = GetLocalIPAddress();
                 int port = 8090;
                 linkServer = new NetworkStreamer();
@@ -1454,9 +1462,9 @@ namespace SoundSync
                 }));
                 linkServer.CommandReceived += json => Dispatcher.BeginInvoke(new Action(() => HandleRemoteCommand(json)));
 
-                audioEngine.Connect(selectedDevices, linkServer, log => { }, () =>
+                audioEngine.Connect(selectedDevices, linkServer, WriteConnectionLog, reason =>
                 {
-                    Dispatcher.BeginInvoke(new Action(Disconnect));
+                    Dispatcher.BeginInvoke(new Action(() => HandleUnexpectedStop(generation, reason)));
                 });
 
                 StartDefaultDevicePeakTimer();
@@ -1464,25 +1472,34 @@ namespace SoundSync
                 StartAutoAlignTimer();
                 RefreshMakeUpGain();
 
-                isMuted = false;
+                isMuted = automatic && restoreMuteAfterReconnect;
+                restoreMuteAfterReconnect = false;
+                reconnect.ConnectionSucceeded();
                 ConnectButton.Content = "断开连接";
                 ConnectButton.Tag = "Connected";
 
                 ShowLinkPanel($"http://{ip}:{port}/?t={Services.LinkAuth.Token}");
-                StatusText.Text = "正在向勾选的设备转发音频。";
+                StatusText.Text = isMuted ? "音频转发已恢复，保持静音。" : "正在向勾选的设备转发音频。";
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
 
                 SaveCurrentProfile();
+                WriteConnectionLog(isMuted ? "连接成功，保持原有静音状态。" : "连接成功。");
+                return true;
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("启动音频转发失败：" + ex.Message);
-                Disconnect();
+                lastConnectionIssue = "启动音频转发失败：" + ex.Message;
+                WriteConnectionLog(lastConnectionIssue);
+                Disconnect(preserveMute: automatic);
+                if (!automatic) System.Windows.MessageBox.Show(lastConnectionIssue);
+                return false;
             }
         }
 
-        private void Disconnect()
+        private void Disconnect(bool preserveMute = false)
         {
+            ++connectionGeneration; // Invalidates already queued callbacks from an older connection.
+            restoreMuteAfterReconnect = preserveMute && (isMuted || restoreMuteAfterReconnect);
             audioEngine.Disconnect(allItems);
 
             if (linkServer != null)
@@ -1507,6 +1524,66 @@ namespace SoundSync
             ConnectButton.Tag = "Disconnected";
             StatusText.Text = "状态：未连接";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusErrorBrush");
+        }
+
+        private void HandleUnexpectedStop(int generation, string reason)
+        {
+            if (closing || generation != connectionGeneration || !reconnect.WantsConnection) return;
+            lastConnectionIssue = reason;
+            SaveCurrentProfile();
+            Disconnect(preserveMute: true);
+            if (appSettings.AutoReconnectEnabled) reconnect.Retry(enabled: true);
+            else StatusText.Text = "转发已断开：" + reason + " 自动重连已关闭。";
+        }
+
+        private bool TryReconnect()
+        {
+            if (closing || !reconnect.WantsConnection) return false;
+            try
+            {
+                SaveCurrentProfile();
+                Disconnect(preserveMute: true);
+                ReloadDevices(quiet: true);
+                WriteConnectionLog("正在尝试自动重连。");
+                return ConnectCore(automatic: true);
+            }
+            catch (Exception ex)
+            {
+                lastConnectionIssue = "重连失败：" + ex.Message;
+                WriteConnectionLog(lastConnectionIssue);
+                return false;
+            }
+        }
+
+        private void ScheduleReconnectTimer(TimeSpan delay)
+        {
+            reconnectTimer ??= new System.Windows.Threading.DispatcherTimer();
+            reconnectTimer.Stop();
+            reconnectTimer.Interval = delay;
+            reconnectTimer.Tick -= ReconnectTimer_Tick;
+            reconnectTimer.Tick += ReconnectTimer_Tick;
+            reconnectTimer.Start();
+        }
+
+        private void ReconnectTimer_Tick(object? sender, EventArgs e)
+        {
+            if (closing) return;
+            if (isConnected) reconnect.ConnectionSucceeded();
+            else reconnect.Tick(appSettings.AutoReconnectEnabled);
+        }
+
+        private void ShowReconnectPending(int attempt, TimeSpan delay)
+        {
+            ConnectButton.Content = "停止自动重连";
+            ConnectButton.Tag = "Disconnected";
+            StatusText.Text = $"转发中断：{lastConnectionIssue} {delay.TotalSeconds:F0} 秒后尝试第 {attempt} 次重连。";
+            StatusText.Foreground = (Brush)FindResource("StatusMutedBrush");
+        }
+
+        private void WriteConnectionLog(string message)
+        {
+            connectionLog ??= new ConnectionLog(Path.Combine(Path.GetDirectoryName(profilePath)!, "connection.log"));
+            connectionLog.Write(message);
         }
 
         public void UpdateRelativeDelays()
@@ -1605,8 +1682,11 @@ namespace SoundSync
                     VolumeRatioToDefault = i.VolumeRatioToDefault
                 }).ToList();
 
-                string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(profilePath, json);
+                // Preserve saved targets that are temporarily absent during retry enumeration.
+                var currentIds = data.Select(i => i.DeviceId).ToHashSet();
+                var merged = new SettingsManager(profilePath).LoadProfile()
+                    .Where(i => !currentIds.Contains(i.DeviceId)).Concat(data).ToList();
+                new SettingsManager(profilePath).SaveProfile(merged);
             }
             catch
             {
@@ -1655,6 +1735,8 @@ namespace SoundSync
 
         protected override void OnClosed(EventArgs e)
         {
+            closing = true;
+            reconnect.Cancel();
             softwareVolumeSaveTimer?.Stop();
             SaveCurrentProfile();
             recoveryTimer?.Stop();

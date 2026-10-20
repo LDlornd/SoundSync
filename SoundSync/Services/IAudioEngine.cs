@@ -8,7 +8,7 @@ namespace SoundSync.Services
     public interface IAudioEngine
     {
         List<MMDevice> GetActiveRenderDevices();
-        void Connect(List<DeviceItem> selectedDevices, INetworkStreamer networkStreamer, Action<string> logCallback, Action onDisconnectedCallback);
+        void Connect(List<DeviceItem> selectedDevices, INetworkStreamer networkStreamer, Action<string> logCallback, Action<string> onDisconnectedCallback);
         void Disconnect(List<DeviceItem> activeDevices);
         void ApplyMakeUpGain(List<DeviceItem> activeDevices, float defaultDeviceVolume, bool enabled);
         void UpdateRelativeDelays(List<DeviceItem> activeDevices);

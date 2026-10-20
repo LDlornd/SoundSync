@@ -9,6 +9,9 @@ namespace SoundSync.Models
         /// <summary>Opt in to the foreground C/M commands; off to avoid accidental changes.</summary>
         public bool KeyboardShortcutsEnabled { get; set; }
 
+        /// <summary>Recover unexpected stream stops even without a device notification.</summary>
+        public bool AutoReconnectEnabled { get; set; } = true;
+
         /// <summary>Show rows the user has hidden.</summary>
         public bool ShowHiddenDevices { get; set; }
 

@@ -952,6 +952,11 @@
         </Button>
 
         <WrapPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+            <CheckBox x:Name="AutoReconnectCheckBox" Content="掉线自动重连" IsChecked="True"
+                      Click="AutoReconnectCheckBox_Click" Style="{StaticResource HardwareCheckBoxStyle}"
+                      AutomationProperties.AutomationId="AutoReconnectCheckBox"
+                      VerticalAlignment="Center" Margin="0,0,20,6"
+                      ToolTip="默认开启。音频捕获或播放流意外停止后自动重试，无需设备变化通知。首次等待 2 秒，失败后逐步延长至最多每 30 秒一次。手动断开或点击“停止自动重连”会取消重试。"/>
             <CheckBox x:Name="AutoStartForwardingCheckBox" Content="启动后自动转发" IsChecked="True"
                       Click="AutoStartForwardingCheckBox_Click" Style="{StaticResource HardwareCheckBoxStyle}"
                       AutomationProperties.AutomationId="AutoStartForwardingCheckBox"

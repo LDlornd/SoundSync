@@ -179,7 +179,8 @@ namespace SoundSync.ViewModels
             }
             try
             {
-                _audioEngine.Connect(selectedDevices, _networkStreamer, log => { }, () => Disconnect());
+                _audioEngine.Connect(selectedDevices, _networkStreamer, log => { }, _ =>
+                    _dispatcher.BeginInvoke(new Action(Disconnect)));
                 StartDefaultDevicePeakTimer();
                 IsConnected = true;
                 ConnectButtonText = "断开连接";

@@ -23,7 +23,8 @@ namespace SoundSync.Services
         public bool IsPreVolumeCapture => usingPreVolumeCapture;
         private readonly List<WasapiOut> outputStreams = new List<WasapiOut>();
         private readonly List<BufferedWaveProvider> buffers = new List<BufferedWaveProvider>();
-        private bool isConnected = false;
+        private volatile bool isConnected = false;
+        private volatile AudioSessionLifetime? sessionLifetime;
 
         public bool IsConnected => isConnected;
 
@@ -42,9 +43,10 @@ namespace SoundSync.Services
             return enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).ToList();
         }
 
-        public void Connect(List<DeviceItem> selectedDevices, INetworkStreamer networkStreamer, Action<string> logCallback, Action onDisconnectedCallback)
+        public void Connect(List<DeviceItem> selectedDevices, INetworkStreamer networkStreamer, Action<string> logCallback, Action<string> onDisconnectedCallback)
         {
             if (isConnected) return;
+            var session = BeginSession();
 
             try
             {
@@ -114,6 +116,9 @@ namespace SoundSync.Services
                     wasapiOut.Init(FormatAdapter.AdaptToWaveProvider(outputPipeline, outputFormat));
                     wasapiOut.Play();
                     outputStreams.Add(wasapiOut);
+                    ObserveOutputStop(wasapiOut, deviceItem.Name, session, logCallback, onDisconnectedCallback);
+                    if (wasapiOut.PlaybackState != PlaybackState.Playing)
+                        ReportUnexpectedStop(session, deviceItem.Name + " 的播放流未能保持运行。", logCallback, onDisconnectedCallback);
                     buffers.Add(buffer);
                     deviceItem.OutputBuffer = buffer;
                     deviceItem.EndpointLatencyMs = 30;
@@ -169,6 +174,7 @@ namespace SoundSync.Services
 
                 loopbackCapture.DataAvailable += (s, args) =>
                 {
+                    if (!ReferenceEquals(sessionLifetime, session) || !session.IsActive) return;
                     // ---- layer 2: distribution -------------------------------------
                     //
                     // Keep the source meter raw. Optional endpoint-volume compensation is
@@ -218,27 +224,49 @@ namespace SoundSync.Services
                 // Windows kills the capture when the source endpoint is reconfigured or
                 // unplugged. Without this the app sits there believing it is still mirroring
                 // while every output has gone quiet.
-                loopbackCapture.RecordingStopped += (s, e) =>
-                {
-                    if (!isConnected) return;
-                    string why = e.Exception != null
-                        ? AudioErrors.Describe(e.Exception, "捕获设备")
-                        : "来源设备已停止提供音频。";
-                    logCallback("音频转发已停止：" + why);
-                    onDisconnectedCallback();
-                };
+                ObserveCaptureStop(loopbackCapture, session, logCallback, onDisconnectedCallback);
 
                 loopbackCapture.StartRecording();
+                if (!session.IsActive) throw new InvalidOperationException("音频流在启动期间已停止。");
                 isConnected = true;
             }
             catch (Exception ex)
             {
                 Disconnect(selectedDevices);
-                onDisconnectedCallback();
                 throw new InvalidOperationException(
                     ex is InvalidOperationException ? ex.Message
                     : "无法启动音频转发。\n\n" + AudioErrors.Describe(ex, "音频引擎"), ex);
             }
+        }
+
+        internal AudioSessionLifetime BeginSession()
+        {
+            sessionLifetime?.End();
+            return sessionLifetime = new AudioSessionLifetime();
+        }
+
+        internal void ObserveCaptureStop(IWaveIn capture, AudioSessionLifetime session,
+            Action<string> log, Action<string> stopped)
+        {
+            capture.RecordingStopped += (_, e) => ReportUnexpectedStop(session,
+                e.Exception == null ? "来源设备的捕获流意外停止。" : AudioErrors.Describe(e.Exception, "捕获设备"),
+                log, stopped);
+        }
+
+        internal void ObserveOutputStop(IWavePlayer output, string name, AudioSessionLifetime session,
+            Action<string> log, Action<string> stopped)
+        {
+            output.PlaybackStopped += (_, e) => ReportUnexpectedStop(session,
+                e.Exception == null ? name + " 的播放流意外停止。" : AudioErrors.Describe(e.Exception, name),
+                log, stopped);
+        }
+
+        private void ReportUnexpectedStop(AudioSessionLifetime session, string reason,
+            Action<string> log, Action<string> stopped)
+        {
+            if (!ReferenceEquals(sessionLifetime, session) || !session.TryReportFault()) return;
+            log("音频转发意外停止：" + reason);
+            stopped(reason);
         }
 
         /// <summary>Measures actual captured samples, then optionally compensates audio for distribution.</summary>
@@ -301,6 +329,10 @@ namespace SoundSync.Services
 
         public void Disconnect(List<DeviceItem> activeDevices)
         {
+            // End the session BEFORE StopRecording/Stop emits final events.
+            sessionLifetime?.End();
+            sessionLifetime = null;
+            isConnected = false;
             if (loopbackCapture != null)
             {
                 try { loopbackCapture.StopRecording(); } catch { }

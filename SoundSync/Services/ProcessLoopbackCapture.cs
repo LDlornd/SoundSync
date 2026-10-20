@@ -233,6 +233,7 @@ namespace SoundSync.Services
                     {
                         int hr = capture!.GetBuffer(out IntPtr data, out uint frames,
                                                     out uint flags, out _, out _);
+                        ThrowIfFailed(hr, "读取音频缓冲区");
                         if (hr != 0 || frames == 0) break;
 
                         int bytes = (int)frames * WaveFormat.BlockAlign;
@@ -241,7 +242,7 @@ namespace SoundSync.Services
                         if ((flags & BufferFlagsSilent) != 0) Array.Clear(scratch, 0, bytes);
                         else Marshal.Copy(data, scratch, 0, bytes);
 
-                        capture.ReleaseBuffer(frames);
+                        ThrowIfFailed(capture.ReleaseBuffer(frames), "释放音频缓冲区");
                         DataAvailable?.Invoke(this, new WaveInEventArgs(scratch, bytes));
                     }
                 }

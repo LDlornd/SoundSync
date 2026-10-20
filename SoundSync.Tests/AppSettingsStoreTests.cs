@@ -13,12 +13,13 @@ public class AppSettingsStoreTests
         string path = Path.GetTempFileName();
         try
         {
-            var settings = new AppSettings { AutoStartForwarding = false, KeyboardShortcutsEnabled = true };
+            var settings = new AppSettings { AutoStartForwarding = false, KeyboardShortcutsEnabled = true, AutoReconnectEnabled = false };
             Assert.True(double.IsNaN(settings.WindowLeft));
             new AppSettingsStore(path).Save(settings);
             var loaded = new AppSettingsStore(path).Load();
             Assert.False(loaded.AutoStartForwarding);
             Assert.True(loaded.KeyboardShortcutsEnabled);
+            Assert.False(loaded.AutoReconnectEnabled);
             Assert.True(double.IsNaN(loaded.WindowLeft));
             Assert.True(double.IsNaN(loaded.WindowTop));
 
@@ -42,6 +43,7 @@ public class AppSettingsStoreTests
             var settings = new AppSettingsStore(path).Load();
             Assert.True(settings.AutoStartForwarding);
             Assert.False(settings.KeyboardShortcutsEnabled);
+            Assert.True(settings.AutoReconnectEnabled);
             Assert.False(settings.IndependentVolumes);
             Assert.Equal(1200, settings.WindowWidth);
         }
