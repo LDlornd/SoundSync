@@ -463,7 +463,8 @@ namespace SoundSync
                     isDefault = i.IsDefaultDevice,
                     selected = i.IsSelected,
                     volume = Math.Round(i.SystemVolume, 3),
-                    softwareVolume = Math.Round(i.SoftwareVolume, 3),
+                    // Quiet positions now use gains below .001; rounding would show them as mute.
+                    softwareVolume = i.SoftwareVolume,
                     delay = i.Delay,
                     badge = i.ConnectionBadge,
                     editable = i.CanProcessAudio

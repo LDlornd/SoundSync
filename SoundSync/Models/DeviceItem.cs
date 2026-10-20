@@ -312,21 +312,44 @@ namespace SoundSync.Models
             get => _softwareVolume;
             set
             {
-                float bounded = float.IsNaN(value) ? 1.0f : Math.Clamp(value, 0f, 1f);
+                float bounded = float.IsFinite(value) ? Math.Clamp(value, 0f, 1f) : 0f;
                 if (_softwareVolume == bounded) return;
                 _softwareVolume = bounded;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(SoftwareVolumePosition));
                 OnPropertyChanged(nameof(SoftwareVolumePercent));
+                OnPropertyChanged(nameof(SoftwareVolumeDecibels));
+                OnPropertyChanged(nameof(SoftwareVolumeTooltip));
                 ApplySoftwareVolume();
                 SoftwareVolumeChangedCallback?.Invoke();
             }
         }
 
-        public string SoftwareVolumePercent => $"{SoftwareVolume * 100:F0}%";
+        /// <summary>
+        /// Audio-tapered slider position. Keep SoftwareVolume as linear gain in profiles
+        /// and the remote protocol, so reopening an older profile cannot raise its gain.
+        /// A cubic curve gives fine control at the quiet end: 10% is -60 dB, 50% is -18 dB.
+        /// </summary>
+        public float SoftwareVolumePosition
+        {
+            get => MathF.Cbrt(SoftwareVolume);
+            set
+            {
+                float position = float.IsFinite(value) ? Math.Clamp(value, 0f, 1f) : 0f;
+                SoftwareVolume = position * position * position;
+            }
+        }
+
+        public string SoftwareVolumePercent => $"{SoftwareVolumePosition * 100:F0}%";
+
+        public string SoftwareVolumeDecibels => SoftwareVolume <= 0f
+            ? "静音" : $"{20f * MathF.Log10(SoftwareVolume):F1} dB";
 
         public string SoftwareVolumeTooltip => IsDefaultDevice
             ? "系统默认设备直接由 Windows 播放，无法用 SoundSync 软件音量控制。请调整其他转发设备的软件音量。"
-            : "只调整 SoundSync 转发到此设备的音频，范围为 0% 至 100%。不会修改 Windows 设备音量，也不影响其他程序。100% 保持原信号，0% 仅将此路转发静音。";
+            : "只调整 SoundSync 转发到此设备的音频，不修改 Windows 音量。采用听感曲线，小音量可更细调节。" +
+              "100% 保持原信号，可能很响；0% 仅将此路转发静音。当前衰减：" + SoftwareVolumeDecibels +
+              "。旧版设置保留实际音量，显示的百分比会随新曲线变化。";
 
         private bool _isSoftwareMuted;
         /// <summary>Transient routing mute; changing the slider while muted keeps the stream silent.</summary>

@@ -661,7 +661,7 @@
                                             <TextBlock Text="软件" FontFamily="{StaticResource OutlawFont}" FontSize="11"
                                                        Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
                                             <Slider Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.01" LargeChange="0.1"
-                                                    Value="{Binding SoftwareVolume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Value="{Binding SoftwareVolumePosition, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                     IsEnabled="{Binding CanProcessAudio}"
                                                     AutomationProperties.Name="SoundSync 软件音量"
                                                     AutomationProperties.AutomationId="SoftwareVolumeSlider"

@@ -1122,15 +1122,16 @@ namespace SoundSync.Services
                         sLab.className = 'ctl-label'; sLab.innerText = '软件音量';
                         const sSlide = document.createElement('input');
                         sSlide.type = 'range'; sSlide.min = 0; sSlide.max = 100;
-                        sSlide.value = Math.round(d.softwareVolume * 100);
+                        // The protocol remains linear gain for older clients/profiles.
+                        sSlide.value = Math.cbrt(Math.max(0, Math.min(1, d.softwareVolume))) * 100;
                         sSlide.disabled = !pcControllable;
                         sSlide.setAttribute('aria-label', 'SoundSync 软件音量：' + d.name);
-                        sSlide.title = '只调整此路转发音频，不改变 Windows 音量';
+                        sSlide.title = '采用听感曲线，小音量可更细调节；100% 保持原信号，可能很响';
                         const sVal = document.createElement('span');
-                        sVal.className = 'ctl-value'; sVal.innerText = sSlide.value + '%';
+                        sVal.className = 'ctl-value'; sVal.innerText = Math.round(sSlide.value) + '%';
                         const softwareSend = throttled(v => sendCommand({ type: 'softwareVolume', id: d.id, value: v }));
-                        sSlide.oninput = () => { sVal.innerText = sSlide.value + '%'; holdList(); softwareSend.during(sSlide.value / 100); };
-                        sSlide.onchange = () => { holdList(); softwareSend.final(sSlide.value / 100); };
+                        sSlide.oninput = () => { sVal.innerText = Math.round(sSlide.value) + '%'; holdList(); softwareSend.during(Math.pow(sSlide.value / 100, 3)); };
+                        sSlide.onchange = () => { holdList(); softwareSend.final(Math.pow(sSlide.value / 100, 3)); };
                         sRow.appendChild(sLab); sRow.appendChild(sSlide); sRow.appendChild(sVal);
                         pcList.appendChild(sRow);
                     }

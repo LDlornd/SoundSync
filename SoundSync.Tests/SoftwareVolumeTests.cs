@@ -39,6 +39,49 @@ public class SoftwareVolumeTests
         AssertSignal(pipeline, expected);
     }
 
+    [Theory]
+    [InlineData(0f, 0f)]
+    [InlineData(0.01f, 0.0000008f)]
+    [InlineData(0.1f, 0.0008f)]
+    [InlineData(0.5f, 0.1f)]
+    [InlineData(1f, 0.8f)]
+    public void SliderCurve_AttenuatesActualAudioAtQuietPositions(float position, float expected)
+    {
+        var item = new DeviceItem { SoftwareVolumePosition = position };
+        var pipeline = new AudioEngine().CreateOutputPipeline(item, new ConstantSignal());
+        float[] samples = new float[256];
+        pipeline.Read(samples, 0, samples.Length);
+        Assert.All(samples, sample => Assert.InRange(sample, expected * 0.9999f, expected * 1.0001f));
+    }
+
+    [Fact]
+    public void OlderSavedLinearGain_KeepsOutputLevelWhenShownOnNewSlider()
+    {
+        var item = new DeviceItem { SoftwareVolume = 0.1f };
+        var pipeline = new AudioEngine().CreateOutputPipeline(item, new ConstantSignal());
+        Assert.InRange(item.SoftwareVolumePosition, 0.4641f, 0.4642f);
+        Assert.Equal("46%", item.SoftwareVolumePercent);
+        AssertSignal(pipeline, 0.08f);
+        // A round trip through the binding must not reinterpret old 10% as a new 10%.
+        item.SoftwareVolumePosition = item.SoftwareVolumePosition;
+        AssertSignal(pipeline, 0.08f);
+    }
+
+    [Theory]
+    [InlineData(float.NaN)]
+    [InlineData(float.PositiveInfinity)]
+    [InlineData(float.NegativeInfinity)]
+    public void InvalidGainOrPosition_FallsBackToSilence(float value)
+    {
+        var item = new DeviceItem();
+        var pipeline = new AudioEngine().CreateOutputPipeline(item, new ConstantSignal());
+        item.SoftwareVolume = value;
+        AssertSignal(pipeline, 0f);
+        item.SoftwareVolume = 1f;
+        item.SoftwareVolumePosition = value;
+        AssertSignal(pipeline, 0f);
+    }
+
     [Fact]
     public void Outputs_HaveIndependentSoftwareGain()
     {
