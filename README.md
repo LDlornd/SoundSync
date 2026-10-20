@@ -1,154 +1,114 @@
-> **简体中文汉化版**：本仓库提供 SoundSync 桌面界面、托盘菜单、操作提示及网络收听网页的简体中文汉化。使用和编译方法请查看 [中文说明](README.zh-CN.md)。下方保留上游英文文档，其中的上游下载链接可能不包含本汉化。
+# SoundSync 简体中文版
 
-<table align="center" border="0" cellpadding="0" cellspacing="0">
-  <tr>
-    <td valign="middle">
-      <img src="assets/logo.png" width="60" height="60" alt="SoundSync Logo" />
-    </td>
-    <td valign="middle" style="padding-left: 15px;">
-      <h1>SoundSync</h1>
-    </td>
-  </tr>
-</table>
+将 Windows 音频同时转发到多副耳机、扬声器，也可通过局域网在手机浏览器中收听。
 
-<p align="center">
- <img src="https://img.shields.io/github/v/release/sugumar247/SoundSync?style=for-the-badge&color=2EA44F" alt="Latest Release" />
-  <img src="https://img.shields.io/badge/PLATFORM-WINDOWS-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Platform" />
-  <img src="https://img.shields.io/badge/LANGUAGE-C%23%20%7C%20.NET%2010-239120?style=for-the-badge&logo=dotnet&logoColor=white" alt="Language" />
-  <img src="https://img.shields.io/badge/UI-WPF-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" alt="Framework" />
-  <img src="https://img.shields.io/badge/LICENSE-MIT-b31b1b?style=for-the-badge" alt="License" />
-  <img src="https://img.shields.io/github/release-date/sugumar247/SoundSync?style=for-the-badge&color=007ACC" alt="Release Date" />
-  <!-- Counts ALL assets across ALL releases historically -->
-<img src="https://img.shields.io/github/downloads/sugumar247/SoundSync/total?style=for-the-badge&color=E65100" alt="Downloads" />
-  <img src="https://img.shields.io/github/repo-size/sugumar247/SoundSync?style=for-the-badge&color=424242" alt="Repo Size" />
-  <img src="https://img.shields.io/github/issues/sugumar247/SoundSync?style=for-the-badge&color=D32F2F" alt="Open Issues" />
+本项目基于 [sugumar247/SoundSync](https://github.com/sugumar247/SoundSync) 的 `v2.0.0` 程序源码，提供简体中文界面，并加入独立软件音量、启动后自动转发和快捷键开关等改进。保留原项目版权及 MIT 许可。
 
-</p>
+**[下载最新版](https://github.com/LDlornd/SoundSync/releases/latest)** · [更新日志](CHANGELOG.md) · [全部发布版本](https://github.com/LDlornd/SoundSync/releases) · [上游英文说明](README.en.md)
 
+## 下载与运行
 
+当前发布版本：**2.0.0-zh-CN.5**，适用于 **Windows x64**。
 
+在[最新 Release](https://github.com/LDlornd/SoundSync/releases/latest) 的附件中选择：
 
-<p align="center">
-  A lightweight, low-latency C# WPF application that captures your system's audio and routes it to multiple hardware output devices simultaneously. Built entirely on the Windows Core Audio API (WASAPI) using the NAudio library.
-</p>
+- `SoundSync.exe`：下载后直接运行。
+- `SoundSync-2.0.0-zh-CN.5-win-x64.zip`：便携包，含程序、使用说明和许可证，解压后运行。
+- `SoundSync-2.0.0-zh-CN.5-source.zip`：需要查看或编译源码时使用。
+- `SHA256SUMS.txt`：上述附件的 SHA-256 校验值。
 
-<img width="1920" height="1011" alt="Screenshot (69)" src="https://github.com/user-attachments/assets/f6f0d33f-e3ae-4860-8a59-05aa843ec048" />
-<img width="1920" height="1008" alt="Screenshot (68)" src="https://github.com/user-attachments/assets/c0d65f88-4f3c-420b-8baa-0c77dd495e9a" />
+程序已包含 .NET 运行时，无需单独安装 .NET。请先退出旧版，再启动新版，避免多个实例同时转发音频。建议将程序保存在固定目录。
 
-<img width="1920" height="884" alt="610347227-a9297c49-3057-4618-b716-a896aa24257f" src="https://github.com/user-attachments/assets/589568c1-960f-485f-b1bc-35d42bb5e686" />
+程序界面的“下载原版更新”仍会打开上游发布页；本简体中文版请从上方本仓库的 Release 下载。
 
+## 主要功能
 
- ##  Features
-  • Multi-Endpoint Routing: Play a single audio source (like a YouTube video, Spotify, or games) through multiple
-  headphones or speakers at the exact same time.
-  
-  • Network Audio Streaming (New!): Stream your PC audio to any smartphone browser on your local network. You can
-  also connect desktop media players like VLC or foobar2000 using dedicated raw streams. Secured with token
-  authentication.
-  
-  • Resilient Audio Engine: Safely hot-swap headphones, dock monitors, or connect via Remote Desktop without
-  crashing. The audio session automatically detects changes and gracefully rebuilds itself in the background.
-  
-  • Intelligent Format Conversion: Seamlessly mirror audio between devices with completely different formats. Mix
-  and match 4-channel surround outputs and stereo headphones—SoundSync handles the channel mapping and resampling
-  automatically.
-  
-  • Per-Device Delay & Volume: Precisely align audio with absolute millisecond delay sliders per output. Every
-  connected device (local or remote) gets its own true volume control, completely independent of the master Windows
-  volume.
-  
-  • Anti-Feedback Loop Protection: Automatically detects your default Windows playback device and prevents audio
-  from being routed back into it, eliminating infinite echo loops. 
-  
-  • Modern UI: Built with Windows Presentation Foundation (WPF) featuring a sleek, dark-mode graphical interface,
-  native system fonts, and clear error explanations.
+- 桌面界面、托盘菜单、提示信息及网络收听网页简体中文汉化。
+- 将音频转发到多个输出设备，分别调节软件音量、均衡器和延时。
+- 手机浏览器在同一局域网内收听，支持按需开启电脑输出设备的远程控制。
+- 启动后自动恢复已保存的设备配置并开始转发。
+- 可启用或禁用前台快捷键，避免误触。
+- 设备变化后自动尝试恢复已有转发连接。
 
-  ##  How it Works
+Windows 提供的设备名、品牌名、技术单位、协议字段及底层系统异常原文保持原样。
 
-  The application uses WasapiLoopbackCapture to intercept the raw audio bytes flowing to your default Windows audio
-  endpoint.
-  When you connect, the signal path goes through three layers:
-  1. Compatibility: Channels are mapped (e.g., folding 4-channel audio into stereo) and resampled to match each
-  target device.
-  2. Distribution: A clean copy of the audio is created. The master Windows volume is mathematically divided back
-  out, ensuring all mirrored outputs receive a pure signal.
-  3. Adjustments: Per-consumer volume, equalizers, and millisecond delays are applied right before the audio hits
-  the secondary hardware or network socket.
-  ##  Getting Started
-  ###  Download & Installation (For Regular Users)
+## 快速开始
 
-  You do not need to install anything to use SoundSync!
+1. 在 Windows 中设置默认输出设备，SoundSync 将其作为音频来源。例如，可将 UU 虚拟音频设备设为默认输出。
+2. 打开 SoundSync，勾选需要接收转发的非默认设备，例如 USB 耳机。
+3. 首次配置时，先把目标设备的“软件”音量调低，再点击“连接并开始音频转发”，按需要逐渐调高音量。
+4. 正常退出软件以保存设备勾选。下次打开时，默认自动连接已保存且当前可用的目标设备。
+5. 如需停止转发，点击“断开连接”。
 
-  1. Go to the Releases Page https://github.com/sugumar247/SoundSync/releases.
-  2. Download Latest SoundSync.exe.
-  3. Double-click the file to run it. That's it!
-  4. (If you face any issues saving settings or setting default devices, open the application with "Run as
-  Administrator").
+已勾选但隐藏的设备仍会参加转发。默认设备直接由 Windows 播放，其“软件”音量控件禁用。
 
-  ###  How to Use It (Local Devices)
+## 自动转发与快捷键
 
-  SoundSync works by capturing audio from your Default Windows Output and mirroring it to other devices.
-  1. Do nothing with your main speakers — whatever is set as your default Windows audio device is automatically your
-  Source.
-  2. Open SoundSync and check the boxes for the devices you want to mirror audio to (e.g., your secondary headphones
-  or TV).
-  3. Note: Do NOT check the box for your default device. It is already the source.
-  4. Click Connect. Audio will now play through your main speakers AND all selected devices!
-  ###  How to Use It (Network Streaming)
+连接按钮下方有两个独立开关，修改后立即保存：
 
-  1. Click Connect in SoundSync.
-  2. The app will generate a secure Web URL and a token.
-  3. Open that URL on your phone or tablet's browser on the same Wi-Fi network.
-  4. Tap to begin listening. You will see your device appear in the SoundSync desktop app, where you can control its
-  volume independently!
-  ###  Building from Source (For Developers)
+| 开关 | 默认状态 | 作用 |
+| --- | --- | --- |
+| 启动后自动转发 | 开启 | 先恢复设备勾选、软件音量、均衡器和延时，再连接当前可用的已配置目标；没有可用目标时保持未连接。 |
+| 启用快捷键 | 关闭 | 开启后，在软件窗口前台按 `C` 连接或断开，按 `M` 切换转发静音。 |
 
-  1. Clone the repository:
-    git clone https://github.com/sugumar247/SoundSync.git
-    
-  2. Open SoundSync.slnx in Visual Studio 2022.
-  3. The project relies on the NAudio https://github.com/naudio/NAudio library. Visual Studio should restore this
-  NuGet package automatically. If not, run:
-    dotnet restore
-    
-  4. Press F5 to compile and run the application.
+快捷键在输入框、密码框和下拉选择中不触发；Ctrl、Alt、Shift 等组合键，以及长按产生的重复事件也不会触发。
 
-  ##  Usage & "Perfect Sync" Tutorial
+顶部“开机启动”控制登录 Windows 时是否打开软件，底部“启动后自动转发”控制软件打开后是否连接，两者分别设置。关闭自动转发不会中断当前连接。
 
-  If you are trying to share a movie with a friend using two pairs of headphones, you might notice a slight delay on
-  the 2nd pair of headphones if you capture audio directly from the 1st pair. You can now fix this in two ways:
-  Because SoundSync now features absolute millisecond delay sliders per output, simply adjust the delay slider on
-  the faster device until it perfectly matches the slower device.
+若旧版已设置开机启动，换用新目录中的程序后，请在新版中将“开机启动”关闭再开启一次，以更新启动路径。
 
-  Method 2: The "Dummy Hardware" Trick (For 100% mathematical sync)
+## 音量、信号表与源音量补偿
 
-  1. Look at your Windows sound settings and find an audio device you aren't currently using (e.g., an HDMI Monitor
-  Method 1: The Delay Sliders
-  with no speakers, or a Virtual Audio Cable like VB-Audio Cable).
-  2. Set that silent device as your Default Windows Output. (Your computer will go silent).
-  3. Open SoundSync.
-  4. Check the boxes for Headphone 1 and Headphone 2.
-  5. Click Connect.
+每个设备的音量区分为两行：
 
-  Because both headphones are now receiving audio via the SoundSync distribution engine rather than one receiving it
-  directly from Windows, their latency is identical.
+- **系统**：修改 Windows 对应设备的音量，可能影响使用该设备的其他程序；最终效果还取决于设备和驱动。
+- **软件**：直接衰减 SoundSync 转发到此设备的音频采样，不修改 Windows 设备音量或静音状态，各路分别保存。
 
-  ##  Built With
+软件滑块采用听感曲线，小音量区间可以更细调节：位置 10% 对应衰减约 60 dB，50% 对应衰减约 18 dB；0% 静音，100% 保持原信号。鼠标悬停可查看当前衰减。**100% 的最大输出没有降低，请从低音量开始调节。**
 
-  • C# / .NET 10.0 - The core framework
-  • WPF - UI Framework
-  • NAudio https://github.com/naudio/NAudio - Audio and WASAPI interaction
+软件音量在均衡器和延时缓冲之后生效，调整时也会影响已经排队的延时音频。启用快捷键后，按 `M` 静音期间调整滑块会保持静音，再次按 `M` 时按新音量恢复。
 
-  ##  Contributing
+信号表显示进入软件音量等处理之前的实际音频电平；软件音量为 0 时仍可能看到信号。来源设备的信号表不根据系统音量反向放大。
 
-  Contributions, issues, and feature requests are welcome!
+“源音量补偿”适用于部分回环捕获会受设备音量衰减的设备。**UU 等虚拟设备若出现“系统音量越低，转发声音反而越大”，请关闭源音量补偿，使用目标设备的“软件”滑块调节。** 如果目标设备的系统音量没有听感变化，也可使用软件滑块控制转发音量。
 
-  1. Fork the Project
-  2. Create your Feature Branch (git checkout -b feature/AmazingFeature)
-  3. Commit your Changes (git commit -m 'Add some AmazingFeature')
-  4. Push to the Branch (git push origin feature/AmazingFeature)
-  5. Open a Pull Request
+## 手机收听
 
-  ##  License
+1. 电脑与手机连接同一局域网，在 SoundSync 中开始转发。
+2. 在手机浏览器中打开软件显示的完整收听链接，并点击“连接并收听”。
+3. 开启“远程控制”后，可在网页的“电脑输出设备”区域调整电脑各路转发音量。网页自身的音量只控制该收听设备。
 
-  Distributed under the MIT License. See LICENSE for more information.
+完整收听链接包含访问令牌，请按需要分享给可信任的收听者。
+
+## 配置与升级
+
+配置保存在 `%LOCALAPPDATA%\SoundSync`，新版沿用已有配置。升级前退出旧版，将新程序放到固定目录后运行；需要备份时，可复制该配置目录。
+
+从 `.2` 或 `.3` 版升级后，软件音量保留相同的实际增益。原来显示 10% 的设置在新曲线下约显示 46%，实际增益不变。
+
+升级默认开启“启动后自动转发”、关闭“启用快捷键”。后续使用会保留用户对这两个开关的选择。
+
+## 从源码编译
+
+需要 Windows 和 .NET 10 SDK：
+
+```powershell
+git clone https://github.com/LDlornd/SoundSync.git
+cd SoundSync
+dotnet test SoundSync.Tests/SoundSync.Tests.csproj -c Release
+dotnet publish SoundSync/SoundSync.csproj -c Release -o publish -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false
+```
+
+构建产物为 `publish/SoundSync.exe`，Windows x64 自包含单文件程序。
+
+## 验证情况
+
+- 61 项自动化测试通过，覆盖启动条件、快捷键保护、配置保存、音频采样增益、静音恢复、延时缓冲、重新连接和信号表修正。
+- 已检查实际 WPF 控件的点击保存、恢复、按键响应及双向绑定；网页 JavaScript 语法和软件音量控制检查通过。
+- 自动转发逻辑通过测试回调验证；尚未完成真实 UU/耳机播放、手机串流或 Windows 登录启动测试。
+
+## 更新记录与许可
+
+各次改动见 [CHANGELOG.md](CHANGELOG.md)，每次发布的下载文件、升级说明见 [Releases](https://github.com/LDlornd/SoundSync/releases)。README 保留当前功能和使用方法。
+
+原项目：[sugumar247/SoundSync](https://github.com/sugumar247/SoundSync)。本项目遵循 MIT 许可，原作者及其他贡献者的版权和许可见 [LICENSE](LICENSE)。[上游英文说明](README.en.md) 保留供参考。
