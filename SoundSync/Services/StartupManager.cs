@@ -15,9 +15,6 @@ namespace SoundSync.Services
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string ValueName = "SoundSync";
 
-        /// <summary>Argument that tells a fresh instance to connect by itself.</summary>
-        public const string AutoConnectArgument = "--autoconnect";
-
         /// <summary>Full path of the running executable, quoted for the registry.</summary>
         private static string ExecutablePath
         {
@@ -26,15 +23,6 @@ namespace SoundSync.Services
                 string path = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
                 return path;
             }
-        }
-
-        /// <summary>True when this process was started with the auto-connect argument.</summary>
-        public static bool LaunchedForAutoConnect()
-        {
-            foreach (string arg in Environment.GetCommandLineArgs())
-                if (string.Equals(arg, AutoConnectArgument, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            return false;
         }
 
         /// <summary>Whether Windows is currently set to start this app at sign-in.</summary>
@@ -82,7 +70,7 @@ namespace SoundSync.Services
                 if (string.IsNullOrEmpty(exe) || !File.Exists(exe))
                     return "无法确定程序路径，不能注册开机启动。";
 
-                key.SetValue(ValueName, $"\"{exe}\" {AutoConnectArgument}", RegistryValueKind.String);
+                key.SetValue(ValueName, $"\"{exe}\"", RegistryValueKind.String);
                 return string.Empty;
             }
             catch (UnauthorizedAccessException)

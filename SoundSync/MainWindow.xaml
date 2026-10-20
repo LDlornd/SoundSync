@@ -454,7 +454,7 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button x:Name="StartupButton" Content="开机启动：关" Style="{StaticResource HeaderButtonStyle}"
                                     Click="StartupButton_Click" Margin="0,0,8,0"
-                                    ToolTip="登录 Windows 时自动启动 SoundSync，并自动连接此处勾选的设备。"/>
+                                    ToolTip="登录 Windows 时自动打开 SoundSync。自动转发由底部“启动后自动转发”开关单独控制。"/>
                             <Button x:Name="IndependentVolumesButton" Content="源音量补偿：开" Style="{StaticResource HeaderButtonStyle}"
                                     Click="IndependentVolumesButton_Click" Margin="0,0,8,0"
                                     ToolTip="部分设备的回环音频会随默认设备音量衰减。开启后，在设备回环捕获时，按设备报告的衰减添加音频增益，最高 8 倍；音量前捕获无需此补偿。&#10;&#10;若虚拟设备出现“系统音量越小，转发声音反而越大”，请关闭补偿，使用各路“软件”音量控制。&#10;&#10;来源信号表始终显示实际捕获电平，不按系统音量反向放大。"/>
@@ -951,8 +951,19 @@
             </Button.Effect>
         </Button>
 
-        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
-            <TextBlock Text="快捷键：" ToolTip="此窗口处于前台时可使用的快捷键。" FontFamily="{StaticResource OutlawFont}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <WrapPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+            <CheckBox x:Name="AutoStartForwardingCheckBox" Content="启动后自动转发" IsChecked="True"
+                      Click="AutoStartForwardingCheckBox_Click" Style="{StaticResource HardwareCheckBoxStyle}"
+                      AutomationProperties.AutomationId="AutoStartForwardingCheckBox"
+                      VerticalAlignment="Center" Margin="0,0,20,6"
+                      ToolTip="打开软件后自动连接已保存且当前可用的转发设备。默认开启；未配置转发设备时不会连接。"/>
+            <CheckBox x:Name="KeyboardShortcutsCheckBox" Content="启用快捷键" IsChecked="False"
+                      Click="KeyboardShortcutsCheckBox_Click" Style="{StaticResource HardwareCheckBoxStyle}"
+                      AutomationProperties.AutomationId="KeyboardShortcutsCheckBox"
+                      VerticalAlignment="Center" Margin="0,0,20,6"
+                      ToolTip="默认关闭以防误触。开启后，窗口在前台时可按 C 连接或断开、M 切换转发静音。输入文字、组合键及按键重复不会触发。"/>
+            <StackPanel x:Name="ShortcutHints" Orientation="Horizontal" Opacity="0.45" Margin="0,0,0,6">
+            <TextBlock Text="快捷键：" ToolTip="先开启“启用快捷键”，再在此窗口前台使用。" FontFamily="{StaticResource OutlawFont}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
             <Border Background="{DynamicResource ShortcutBgBrush}" BorderBrush="{DynamicResource ConsoleBorderBrush}" BorderThickness="1" CornerRadius="0" Padding="6,3" Margin="0,0,12,0">
                 <StackPanel Orientation="Horizontal">
@@ -971,7 +982,8 @@
                     <TextBlock Text="静音 / 取消静音" ToolTip="按 M 将所有转发设备静音或取消静音，不断开连接。" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="{StaticResource OutlawFont}" FontSize="13" VerticalAlignment="Center"/>
                 </StackPanel>
             </Border>
-        </StackPanel>
+            </StackPanel>
+        </WrapPanel>
 
     </Grid>
 </Window>

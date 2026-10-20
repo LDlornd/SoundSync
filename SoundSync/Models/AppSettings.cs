@@ -4,7 +4,10 @@ namespace SoundSync.Models
     public class AppSettings
     {
         /// <summary>Start mirroring by itself when the app opens.</summary>
-        public bool AutoConnectOnLaunch { get; set; }
+        public bool AutoStartForwarding { get; set; } = true;
+
+        /// <summary>Opt in to the foreground C/M commands; off to avoid accidental changes.</summary>
+        public bool KeyboardShortcutsEnabled { get; set; }
 
         /// <summary>Show rows the user has hidden.</summary>
         public bool ShowHiddenDevices { get; set; }

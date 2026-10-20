@@ -34,6 +34,7 @@ namespace SoundSync
         /// <summary>Every row, including the ones filtered out of the visible list.</summary>
         private List<DeviceItem> allItems = new List<DeviceItem>();
         private AppSettings appSettings = new AppSettings();
+        private bool startupInitialized;
 
         private readonly IAudioEngine audioEngine = new AudioEngine();
         private bool isConnected => audioEngine.IsConnected;
@@ -207,6 +208,8 @@ namespace SoundSync
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            if (startupInitialized) return;
+            startupInitialized = true;
             LoadAppSettings();
             RestoreWindowGeometry();
 
@@ -221,16 +224,11 @@ namespace SoundSync
             StartEnvironmentWatcher();
             CheckForUpdatesAsync();
 
-            // Reconnect by itself when the user asked for it, or when Windows launched us
-            // at sign-in with the auto-connect argument.
-            if (appSettings.AutoConnectOnLaunch || StartupManager.LaunchedForAutoConnect())
-            {
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (!isConnected && allItems.Any(i => i.IsSelected && !i.IsDefaultDevice))
-                        ConnectButton_Click(this, new RoutedEventArgs());
-                }), System.Windows.Threading.DispatcherPriority.Background);
-            }
+            // Restore device selections and gains before opening any output. Use Connect
+            // directly: a queued startup action must never toggle an existing connection off.
+            Dispatcher.BeginInvoke(new Action(() =>
+                AppCommands.TryAutoConnect(appSettings, allItems, isConnected, Connect)),
+                System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private System.Windows.Threading.DispatcherTimer? autoAlignTimer;
@@ -662,8 +660,7 @@ namespace SoundSync
                 if (isConnected) Disconnect();
                 ReloadDevices();
 
-                var listed = DeviceListBox.ItemsSource as List<DeviceItem> ?? new List<DeviceItem>();
-                bool haveTargets = listed.Any(i => i.IsSelected && !i.IsDefaultDevice);
+                bool haveTargets = allItems.Any(i => i.IsSelected && !i.IsDefaultDevice);
 
                 if (wantsMirroring && haveTargets)
                 {
@@ -887,21 +884,14 @@ namespace SoundSync
 
         private void LoadAppSettings()
         {
-            try
-            {
-                if (!File.Exists(AppSettingsPath)) return;
-                appSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(AppSettingsPath))
-                              ?? new AppSettings();
-            }
-            catch { appSettings = new AppSettings(); }
+            appSettings = new AppSettingsStore(AppSettingsPath).Load();
         }
 
         private void SaveAppSettings()
         {
             try
             {
-                File.WriteAllText(AppSettingsPath,
-                    JsonSerializer.Serialize(appSettings, new JsonSerializerOptions { WriteIndented = true }));
+                new AppSettingsStore(AppSettingsPath).Save(appSettings);
             }
             catch { }
         }
@@ -972,9 +962,12 @@ namespace SoundSync
                 ? "源音量补偿：开" : "源音量补偿：关";
             RemoteControlButton.Content = appSettings.AllowRemoteControl
                 ? "远程控制：开" : "远程控制：关";
+            AutoStartForwardingCheckBox.IsChecked = appSettings.AutoStartForwarding;
+            KeyboardShortcutsCheckBox.IsChecked = appSettings.KeyboardShortcutsEnabled;
+            ShortcutHints.Opacity = appSettings.KeyboardShortcutsEnabled ? 1.0 : 0.45;
             StartupButton.ToolTip = onStartup
-                ? "登录 Windows 后自动启动 SoundSync，并按当前设置自动连接。点击关闭。"
-                : "点击后，登录 Windows 时将自动启动 SoundSync，并自动连接已勾选的设备。";
+                ? "登录 Windows 后自动打开 SoundSync。是否自动转发由底部“启动后自动转发”开关控制。点击关闭开机启动。"
+                : "点击后，登录 Windows 时自动打开 SoundSync。底部“启动后自动转发”可单独控制打开后是否开始转发。";
         }
 
         private void StartupButton_Click(object sender, RoutedEventArgs e)
@@ -989,12 +982,10 @@ namespace SoundSync
                 return;
             }
 
-            appSettings.AutoConnectOnLaunch = turningOn;
-            SaveAppSettings();
             RefreshHeaderToggles();
 
             StatusText.Text = turningOn
-                ? "SoundSync 将随 Windows 启动并自动连接。"
+                ? "SoundSync 将随 Windows 启动。自动转发按底部开关设置执行。"
                 : "SoundSync 已取消开机启动。";
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("StatusSuccessBrush");
         }
@@ -1055,16 +1046,32 @@ namespace SoundSync
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key == Key.C)
-            {
-                ConnectButton_Click(this, new RoutedEventArgs());
-                e.Handled = true;
-            }
-            else if (e.Key == Key.M)
-            {
-                ToggleMute();
-                e.Handled = true;
-            }
+            if (e.Handled) return;
+            e.Handled = AppCommands.TryHandleShortcut(appSettings, e.Key, Keyboard.Modifiers,
+                e.IsRepeat, AppCommands.IsEditingControl(e.OriginalSource as DependencyObject),
+                () => ConnectButton_Click(this, new RoutedEventArgs()), ToggleMute);
+        }
+
+        private void AutoStartForwardingCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            appSettings.AutoStartForwarding = AutoStartForwardingCheckBox.IsChecked == true;
+            SaveAppSettings();
+            RefreshHeaderToggles();
+            StatusText.Text = appSettings.AutoStartForwarding
+                ? "启动后自动转发已开启：下次打开软件时，将自动连接已保存且可用的转发设备。"
+                : "启动后自动转发已关闭：下次打开软件后可手动连接。";
+            StatusText.Foreground = (Brush)FindResource("StatusSuccessBrush");
+        }
+
+        private void KeyboardShortcutsCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            appSettings.KeyboardShortcutsEnabled = KeyboardShortcutsCheckBox.IsChecked == true;
+            SaveAppSettings();
+            RefreshHeaderToggles();
+            StatusText.Text = appSettings.KeyboardShortcutsEnabled
+                ? "快捷键已启用：窗口在前台且未输入文字时，C 连接或断开，M 切换转发静音。"
+                : "快捷键已禁用：C 和 M 不会触发转发操作。";
+            StatusText.Foreground = (Brush)FindResource("StatusSuccessBrush");
         }
 
         private void Slider_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
@@ -1425,10 +1432,8 @@ namespace SoundSync
 
         private void Connect()
         {
-            var items = DeviceListBox.ItemsSource as List<DeviceItem>;
-            if (items == null) return;
-
-            var selectedDevices = items.Where(i => i.IsSelected).ToList();
+            // Hiding a configured output must not remove it from startup/manual routing.
+            var selectedDevices = allItems.Where(i => i.IsSelected && !i.IsDefaultDevice).ToList();
             if (selectedDevices.Count == 0)
             {
                 System.Windows.MessageBox.Show("请至少勾选一个非默认输出设备。");
@@ -1506,9 +1511,7 @@ namespace SoundSync
 
         public void UpdateRelativeDelays()
         {
-            var items = DeviceListBox.ItemsSource as List<DeviceItem>;
-            if (items == null) return;
-            audioEngine.UpdateRelativeDelays(items);
+            audioEngine.UpdateRelativeDelays(allItems);
         }
 
         private void StartDefaultDevicePeakTimer()
